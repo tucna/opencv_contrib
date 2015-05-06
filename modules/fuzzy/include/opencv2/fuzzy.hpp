@@ -44,11 +44,32 @@
 
 #include "opencv2/core.hpp"
 
+/**
+@defgroup fuzzy Image processing based on fuzzy mathematics
+
+Namespace for all functions is **ft**.
+
+  @{
+    @defgroup f0_math Math with F0-transfrom support
+
+Description here - F0.
+
+    @defgroup f_image Fuzzy image processing
+
+Description here - image.
+
+   @}
+
+*/
+
 namespace cv
 {
 
 namespace ft
 {
+    //! @addtogroup f0_math
+    //! @{
+
     enum
     {
         LINEAR = 1,
@@ -169,8 +190,9 @@ namespace ft
     Filtering of the input image by means of F-transform.
     */
     CV_EXPORTS void filter(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output);
-}
 
+    //! @}
+}
 }
 
 #endif // __OPENCV_FUZZY_H__
