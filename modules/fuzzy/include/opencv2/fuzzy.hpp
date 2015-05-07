@@ -191,6 +191,10 @@ namespace ft
     */
     CV_EXPORTS void filter(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output);
 
+    //
+    CV_EXPORTS void FT12D_components(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray components);
+    CV_EXPORTS void FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray c00, cv::OutputArray c10, cv::OutputArray c01);
+
     //! @}
 }
 }
