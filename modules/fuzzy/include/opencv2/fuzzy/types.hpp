@@ -39,28 +39,32 @@
 //
 //M*/
 
-#ifndef __OPENCV_FUZZY_H__
-#define __OPENCV_FUZZY_H__
+#ifndef __OPENCV_FUZZY_TYPES_H__
+#define __OPENCV_FUZZY_TYPES_H__
 
-#include "fuzzy/types.hpp"
-#include "fuzzy/fuzzy_F0_math.hpp"
-#include "fuzzy/fuzzy_image.hpp"
+namespace cv
+{
 
-/**
-@defgroup fuzzy Image processing based on fuzzy mathematics
+namespace ft
+{
+    //! @addtogroup fuzzy
+    //! @{
 
-Namespace for all functions is **ft**. The module brings implementation of the last image processing algorithms based on fuzzy mathematics.
+    enum
+    {
+        LINEAR = 1,
+        SINUS = 2
+    };
 
-  @{
-    @defgroup f0_math Math with F0-transfrom support
+    enum
+    {
+        ONE_STEP = 1,
+        MULTI_STEP = 2,
+        ITERATIVE = 3
+    };
 
-Fuzzy transform (F-transform) of the 0th degree transform whole image to a vector of its components. These components are used in latter computation.
+    //! @}
+}
+}
 
-    @defgroup f_image Fuzzy image processing
-
-Image proceesing based on F-transform is fast to process and easy to understand.
-   @}
-
-*/
-
-#endif // __OPENCV_FUZZY_H__
+#endif // __OPENCV_FUZZY_TYPES_H__
