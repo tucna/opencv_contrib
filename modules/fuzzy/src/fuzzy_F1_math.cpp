@@ -48,7 +48,7 @@ void ft::FT12D_components(cv::InputArray matrix, cv::InputArray kernel, cv::Outp
 
 }
 
-void ft::FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray c00, cv::OutputArray c10, cv::OutputArray c01)
+void ft::FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray c00, cv::OutputArray c10, cv::OutputArray c01, cv::InputArray mask)
 {
     Mat matrixMat = matrix.getMat();
     Mat kernelMat = kernel.getMat();
@@ -75,8 +75,11 @@ void ft::FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::Outp
     Mat c10Mat = c10.getMat();
     Mat c01Mat = c01.getMat();
 
-    Mat vecX(area.height, area.width, CV_8U);
-    Mat vecY(area.height, area.width, CV_8U);
+    Mat vecX;
+    Mat vecY;
+
+    FT12D_createPolynomMatrixVertical(radiusX, vecX);
+    FT12D_createPolynomMatrixHorizontal(radiusY, vecY);
 
     for (int i = 0; i < An; i++)
     {
@@ -92,11 +95,53 @@ void ft::FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::Outp
 
             kernelMat.copyTo(kernelMasked, roiMask);
 
-            Mat numerator;
-            multiply(roiImage, kernelMasked, numerator, 1, CV_32F);
+            Mat numerator00, numerator10, numerator01;
+            multiply(roiImage, kernelMasked, numerator00, 1, CV_32F);
+            multiply(numerator00, vecX, numerator10, 1, CV_32F);
+            multiply(numerator00, vecY, numerator01, 1, CV_32F);
 
-            c00Mat.row(o).col(i) = sum(numerator) / sum(kernelMasked);
+            Mat denominator00, denominator10, denominator01;
+            denominator00 = kernelMasked;
+            multiply(vecX.mul(vecX), kernelMasked, denominator10, 1, CV_32F);
+            multiply(vecY.mul(vecY), kernelMasked, denominator01, 1, CV_32F);
+
+            c00Mat.row(o).col(i) = sum(numerator00) / sum(denominator00);
+            c10Mat.row(o).col(i) = sum(numerator10) / sum(denominator10);
+            c01Mat.row(o).col(i) = sum(numerator01) / sum(denominator01);
         }
     }
 }
 
+void ft::FT12D_createPolynomMatrixVertical(int radius, cv::OutputArray matrix)
+{
+    int dimension = radius * 2 + 1;
+
+    matrix.create(dimension, dimension, CV_16S);
+
+    Mat matrixMat = matrix.getMat();
+
+    matrixMat = 0;
+
+    for (int i = 0; i < radius; i++)
+    {
+        matrixMat.col(i) = i - radius;
+        matrixMat.col(dimension - 1 - i) = radius - i;
+    }
+}
+
+void ft::FT12D_createPolynomMatrixHorizontal(int radius, cv::OutputArray matrix)
+{
+    int dimension = radius * 2 + 1;
+
+    matrix.create(dimension, dimension, CV_16S);
+
+    Mat matrixMat = matrix.getMat();
+
+    matrixMat = 0;
+
+    for (int i = 0; i < radius; i++)
+    {
+        matrixMat.row(i) = i - radius;
+        matrixMat.row(dimension - 1 - i) = radius - i;
+    }
+}
