@@ -43,12 +43,12 @@
 
 using namespace cv;
 
-void ft::FT12D_components(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray components)
+void ft::FT12D_components(InputArray matrix, InputArray kernel, OutputArray components)
 {
 
 }
 
-void ft::FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray c00, cv::OutputArray c10, cv::OutputArray c01, cv::InputArray mask)
+void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components, InputArray mask)
 {
     Mat matrixMat = matrix.getMat();
     Mat kernelMat = kernel.getMat();
@@ -70,10 +70,12 @@ void ft::FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::Outp
     c00.create(Bn, An, CV_32F);
     c10.create(Bn, An, CV_32F);
     c01.create(Bn, An, CV_32F);
+    components.create(Bn * kernelMat.rows, An * kernelMat.cols, CV_32F);
 
     Mat c00Mat = c00.getMat();
     Mat c10Mat = c10.getMat();
     Mat c01Mat = c01.getMat();
+    Mat componentsMat = components.getMat();
 
     Mat vecX;
     Mat vecY;
@@ -108,11 +110,24 @@ void ft::FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::Outp
             c00Mat.row(o).col(i) = sum(numerator00) / sum(denominator00);
             c10Mat.row(o).col(i) = sum(numerator10) / sum(denominator10);
             c01Mat.row(o).col(i) = sum(numerator01) / sum(denominator01);
+
+            Mat component1(componentsMat, Rect(i * kernelMat.cols, o * kernelMat.rows, kernelMat.cols, kernelMat.rows));
+
+            //component1 =  c10Mat.at<float>(o,i) * vecX;// + c01Mat.at<float>(o,i) * vecY;
+
+            Mat updatedC10;
+            Mat updatedC01;
+
+            multiply(c10Mat.at<float>(o,i), vecX, updatedC10, 1, CV_32F);
+            multiply(c01Mat.at<float>(o,i), vecY, updatedC01, 1, CV_32F);
+
+            add(updatedC01, updatedC10, component1);
+            add(component1, c00Mat.at<float>(o,i), component1);
         }
     }
 }
 
-void ft::FT12D_createPolynomMatrixVertical(int radius, cv::OutputArray matrix)
+void ft::FT12D_createPolynomMatrixVertical(int radius, OutputArray matrix)
 {
     int dimension = radius * 2 + 1;
 
@@ -129,7 +144,7 @@ void ft::FT12D_createPolynomMatrixVertical(int radius, cv::OutputArray matrix)
     }
 }
 
-void ft::FT12D_createPolynomMatrixHorizontal(int radius, cv::OutputArray matrix)
+void ft::FT12D_createPolynomMatrixHorizontal(int radius, OutputArray matrix)
 {
     int dimension = radius * 2 + 1;
 
