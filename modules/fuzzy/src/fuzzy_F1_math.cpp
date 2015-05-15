@@ -113,8 +113,6 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
 
             Mat component1(componentsMat, Rect(i * kernelMat.cols, o * kernelMat.rows, kernelMat.cols, kernelMat.rows));
 
-            //component1 =  c10Mat.at<float>(o,i) * vecX;// + c01Mat.at<float>(o,i) * vecY;
-
             Mat updatedC10;
             Mat updatedC01;
 
@@ -160,3 +158,41 @@ void ft::FT12D_createPolynomMatrixHorizontal(int radius, OutputArray matrix)
         matrixMat.row(dimension - 1 - i) = radius - i;
     }
 }
+
+void ft::FT12D_inverseFT(cv::InputArray components, cv::InputArray kernel, cv::OutputArray output, int width, int height)
+{
+    Mat componentsMat = components.getMat();
+    Mat kernelMat = kernel.getMat();
+
+    CV_Assert(componentsMat.channels() == 1 && kernelMat.channels() == 1);
+
+    int radiusX = (kernelMat.cols - 1) / 2;
+    int radiusY = (kernelMat.rows - 1) / 2;
+    int paddedOutputWidth = radiusX + width + kernelMat.cols;
+    int paddedOutputHeight = radiusY + height + kernelMat.rows;
+
+    output.create(height, width, CV_32F);
+
+    Mat outputZeroes(paddedOutputHeight, paddedOutputWidth, CV_32F, Scalar(0));
+
+    for (int i = 0; i < componentsMat.cols; i++)
+    {
+        for (int o = 0; o < componentsMat.rows; o++)
+        {
+            int centerX = (i * radiusX) + radiusX;
+            int centerY = (o * radiusY) + radiusY;
+            Rect area(centerX - radiusX, centerY - radiusY, kernelMat.cols, kernelMat.rows);
+
+            Mat component(componentsMat, Rect(i * kernelMat.cols, o * kernelMat.rows, kernelMat.cols, kernelMat.rows));
+
+            Mat numerator;
+            multiply(component, kernel, numerator, 1, CV_32F);
+
+            Mat roiOutput(outputZeroes, area);
+            roiOutput += sum(numerator) / sum(kernel);
+        }
+    }
+
+    outputZeroes(Rect(radiusX, radiusY, width, height)).copyTo(output);
+}
+
