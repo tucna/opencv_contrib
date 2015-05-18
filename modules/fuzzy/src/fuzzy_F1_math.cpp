@@ -175,9 +175,9 @@ void ft::FT12D_inverseFT(cv::InputArray components, cv::InputArray kernel, cv::O
 
     Mat outputZeroes(paddedOutputHeight, paddedOutputWidth, CV_32F, Scalar(0));
 
-    for (int i = 0; i < componentsMat.cols; i++)
+    for (int i = 0; i < componentsMat.cols / kernelMat.cols; i++)
     {
-        for (int o = 0; o < componentsMat.rows; o++)
+        for (int o = 0; o < componentsMat.rows / kernelMat.rows; o++)
         {
             int centerX = (i * radiusX) + radiusX;
             int centerY = (o * radiusY) + radiusY;
@@ -185,11 +185,8 @@ void ft::FT12D_inverseFT(cv::InputArray components, cv::InputArray kernel, cv::O
 
             Mat component(componentsMat, Rect(i * kernelMat.cols, o * kernelMat.rows, kernelMat.cols, kernelMat.rows));
 
-            Mat numerator;
-            multiply(component, kernel, numerator, 1, CV_32F);
-
             Mat roiOutput(outputZeroes, area);
-            roiOutput += sum(numerator) / sum(kernel);
+            roiOutput += kernelMat.mul(component);
         }
     }
 
