@@ -194,9 +194,11 @@ namespace ft
     //
     CV_EXPORTS void FT12D_components(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray components);
     CV_EXPORTS void FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray c00, cv::OutputArray c10, cv::OutputArray c01, cv::OutputArray components, cv::InputArray mask);
-    CV_EXPORTS void FT12D_createPolynomMatrixVertical(int radius, cv::OutputArray matrix);
-    CV_EXPORTS void FT12D_createPolynomMatrixHorizontal(int radius, cv::OutputArray matrix);
+    CV_EXPORTS void FT12D_createPolynomMatrixVertical(int radius, cv::OutputArray matrix, const int chn = 1);
+    CV_EXPORTS void FT12D_createPolynomMatrixHorizontal(int radius, cv::OutputArray matrix, const int chn = 1);
     CV_EXPORTS void FT12D_inverseFT(cv::InputArray components, cv::InputArray kernel, cv::OutputArray output, int width, int height);
+    CV_EXPORTS void FT12D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask);
+
 
     //! @}
 }
