@@ -266,3 +266,108 @@ void ft::FT12D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &out
 
     output = output(Rect(radiusX, radiusY, image.cols, image.rows));
 }
+
+void DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int radius)
+{
+    Mat kernel;
+    ft::createKernel(ft::LINEAR, radius, kernel, image.channels());
+
+    int radiusX = (kernel.cols - 1) / 2;
+    int radiusY = (kernel.rows - 1) / 2;
+    int An = image.cols / radiusX + 1;
+    int Bn = image.rows / radiusY + 1;
+    int outputWidthPadded = radiusX + image.cols + kernel.cols;
+    int outputHeightPadded = radiusY + image.rows + kernel.rows;
+
+    Mat imagePadded;
+    Mat maskPadded;
+
+    copyMakeBorder(image, imagePadded, radiusY, kernel.rows, radiusX, kernel.cols, BORDER_CONSTANT, Scalar(0));
+    copyMakeBorder(mask, maskPadded, radiusY, kernel.rows, radiusX, kernel.cols, BORDER_CONSTANT, Scalar(0));
+
+    Mat c00(Bn, An, CV_32F);
+    Mat c10(Bn, An, CV_32F);
+    Mat c01(Bn, An, CV_32F);
+    Mat components(Bn * kernel.rows, An * kernel.cols, CV_32F);
+
+    Mat vecX;
+    Mat vecY;
+
+    ft::FT12D_createPolynomMatrixVertical(radiusX, vecX, image.channels());
+    ft::FT12D_createPolynomMatrixHorizontal(radiusY, vecY, image.channels());
+
+    Mat cMask = Mat::ones(c00.size(), CV_8U);
+    output = Mat::zeros(outputHeightPadded, outputWidthPadded, CV_MAKETYPE(CV_32F, image.channels()));
+
+    for (int i = 0; i < An; i++)
+    {
+        for (int o = 0; o < Bn; o++)
+        {
+            int centerX = (i * radiusX) + radiusX;
+            int centerY = (o * radiusY) + radiusY;
+            Rect area(centerX - radiusX, centerY - radiusY, kernel.cols, kernel.rows);
+
+            Mat roiImage(imagePadded, area);
+            Mat roiMask(maskPadded, area);
+            Mat kernelMasked;
+
+            kernel.copyTo(kernelMasked, roiMask);
+
+            Mat numerator00, numerator10, numerator01;
+            multiply(roiImage, kernelMasked, numerator00, 1, CV_32F);
+            multiply(numerator00, vecX, numerator10, 1, CV_32F);
+            multiply(numerator00, vecY, numerator01, 1, CV_32F);
+
+            Mat denominator00, denominator10, denominator01;
+            denominator00 = kernelMasked;
+            multiply(vecX.mul(vecX), kernelMasked, denominator10, 1, CV_32F);
+            multiply(vecY.mul(vecY), kernelMasked, denominator01, 1, CV_32F);
+
+            c00.row(o).col(i) = sum(numerator00) / sum(denominator00);
+
+            if (countNonZero(roiMask) < roiMask.rows * roiMask.cols)
+            {
+                c10.row(o).col(i) = -1;
+                c01.row(o).col(i) = -1;
+
+                cMask.row(o).col(i) = 0;
+            }
+            else
+            {
+                c10.row(o).col(i) = sum(numerator10) / sum(denominator10);
+                c01.row(o).col(i) = sum(numerator01) / sum(denominator01);
+            }
+        }
+    }
+
+    Mat c10Rec, c01Rec;
+    ft::inpaint(c10, cMask, c10Rec, 2, ft::LINEAR, ft::ONE_STEP);
+    ft::inpaint(c01, cMask, c01Rec, 2, ft::LINEAR, ft::ONE_STEP);
+
+    for (int i = 0; i < An; i++)
+    {
+        for (int o = 0; o < Bn; o++)
+        {
+            int centerX = (i * radiusX) + radiusX;
+            int centerY = (o * radiusY) + radiusY;
+            Rect area(centerX - radiusX, centerY - radiusY, kernel.cols, kernel.rows);
+
+            Mat component1(components, Rect(i * kernel.cols, o * kernel.rows, kernel.cols, kernel.rows));
+
+            Mat updatedC10;
+            Mat updatedC01;
+
+            multiply(c10.at<float>(o,i), vecX, updatedC10, 1, CV_32F);
+            multiply(c01.at<float>(o,i), vecY, updatedC01, 1, CV_32F);
+
+            add(updatedC01, updatedC10, component1);
+            add(component1, c00.at<float>(o,i), component1);
+
+            Mat roiOutput(output, area);
+            roiOutput += kernel.mul(component1);
+        }
+    }
+
+    output = output(Rect(radiusX, radiusY, image.cols, image.rows));
+}
+
