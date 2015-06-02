@@ -267,7 +267,7 @@ void ft::FT12D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &out
     output = output(Rect(radiusX, radiusY, image.cols, image.rows));
 }
 
-void DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int radius)
+void ft::DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int radius)
 {
     Mat kernel;
     ft::createKernel(ft::LINEAR, radius, kernel, image.channels());
