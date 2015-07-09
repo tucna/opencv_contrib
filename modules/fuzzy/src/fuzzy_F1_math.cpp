@@ -128,8 +128,18 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
             Mat updatedC10;
             Mat updatedC01;
 
-            multiply(c10Mat.at<float>(o,i), vecX, updatedC10, 1, CV_32F);
-            multiply(c01Mat.at<float>(o,i), vecY, updatedC01, 1, CV_32F);
+            //***
+            Mat vecXMasked, vecYMasked;
+
+            vecX.copyTo(vecXMasked, roiMask);
+            vecY.copyTo(vecYMasked, roiMask);
+
+            //vecX to vecXMasked
+            //vecY to vecYMasked
+            //***
+
+            multiply(c10Mat.at<float>(o,i), vecXMasked, updatedC10, 1, CV_32F);
+            multiply(c01Mat.at<float>(o,i), vecYMasked, updatedC01, 1, CV_32F);
 
             add(updatedC01, updatedC10, component1);
             add(component1, c00Mat.at<float>(o,i), component1);
