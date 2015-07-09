@@ -120,7 +120,8 @@ void ft::inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int
         image.convertTo(processingInput, CV_32F);
 
         Mat processingMask;
-        cvtColor(mask, processingMask, COLOR_BGR2GRAY);
+        //cvtColor(mask, processingMask, COLOR_BGR2GRAY);
+        mask.copyTo(processingMask);
 
         do
         {
@@ -151,7 +152,8 @@ void ft::inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int
         image.convertTo(processingInput, CV_32F);
 
         Mat processingMask;
-        cvtColor(mask, processingMask, COLOR_BGR2GRAY);
+        //cvtColor(mask, processingMask, COLOR_BGR2GRAY);
+        mask.copyTo(processingMask);
 
         do
         {
