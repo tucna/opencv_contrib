@@ -50,6 +50,10 @@ void ft::FT12D_components(InputArray matrix, InputArray kernel, OutputArray comp
 
 void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components)
 {
+    // DIFFERENT BORDERS SO MASK IS USED!!! ERASE
+    Mat mask = Mat::ones(matrix.size(), CV_8U);
+    //***
+
     Mat matrixMat = matrix.getMat();
     Mat kernelMat = kernel.getMat();
 
@@ -63,6 +67,12 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
     Mat matrixPadded;
 
     copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
+
+    //***
+    Mat maskPadded;
+
+    copyMakeBorder(mask, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
+    //***
 
     c00.create(Bn, An, CV_32F);
     c10.create(Bn, An, CV_32F);
@@ -90,15 +100,24 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
 
             Mat roiImage(matrixPadded, area);
 
+            //***
+            Mat roiMask(maskPadded, area);
+            Mat kernelMasked;
+
+            kernelMat.copyTo(kernelMasked, roiMask);
+
+            //kernelMat to kernelMasked
+            //***
+
             Mat numerator00, numerator10, numerator01;
-            multiply(roiImage, kernelMat, numerator00, 1, CV_32F);
+            multiply(roiImage, kernelMasked, numerator00, 1, CV_32F);
             multiply(numerator00, vecX, numerator10, 1, CV_32F);
             multiply(numerator00, vecY, numerator01, 1, CV_32F);
 
             Mat denominator00, denominator10, denominator01;
-            denominator00 = kernelMat;
-            multiply(vecX.mul(vecX), kernelMat, denominator10, 1, CV_32F);
-            multiply(vecY.mul(vecY), kernelMat, denominator01, 1, CV_32F);
+            denominator00 = kernelMasked;
+            multiply(vecX.mul(vecX), kernelMasked, denominator10, 1, CV_32F);
+            multiply(vecY.mul(vecY), kernelMasked, denominator01, 1, CV_32F);
 
             c00Mat.row(o).col(i) = sum(numerator00) / sum(denominator00);
             c10Mat.row(o).col(i) = sum(numerator10) / sum(denominator10);
