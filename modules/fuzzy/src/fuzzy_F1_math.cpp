@@ -39,28 +39,64 @@
 //
 //M*/
 
-#ifndef __OPENCV_FUZZY_H__
-#define __OPENCV_FUZZY_H__
+#include "precomp.hpp"
 
-#include "fuzzy/types.hpp"
-#include "fuzzy/fuzzy_F0_math.hpp"
-#include "fuzzy/fuzzy_image.hpp"
+using namespace cv;
 
-/**
-@defgroup fuzzy Image processing based on fuzzy mathematics
+void ft::FT12D_components(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray components)
+{
 
-Namespace for all functions is **ft**. The module brings implementation of the last image processing algorithms based on fuzzy mathematics.
+}
 
-  @{
-    @defgroup f0_math Math with F0-transfrom support
+void ft::FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray c00, cv::OutputArray c10, cv::OutputArray c01)
+{
+    Mat matrixMat = matrix.getMat();
+    Mat kernelMat = kernel.getMat();
+    Mat maskMat = mask.getMat();
 
-Fuzzy transform (F-transform) of the 0th degree transform whole image to a vector of its components. These components are used in latter computation.
+    CV_Assert(matrixMat.channels() == 1 && kernelMat.channels() == 1 && maskMat.channels() == 1);
 
-    @defgroup f_image Fuzzy image processing
+    int radiusX = (kernelMat.cols - 1) / 2;
+    int radiusY = (kernelMat.rows - 1) / 2;
+    int An = matrixMat.cols / radiusX + 1;
+    int Bn = matrixMat.rows / radiusY + 1;
 
-Image proceesing based on F-transform is fast to process and easy to understand.
-   @}
+    Mat matrixPadded;
+    Mat maskPadded;
 
-*/
+    copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
+    copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
 
-#endif // __OPENCV_FUZZY_H__
+    c00.create(Bn, An, CV_32F);
+    c10.create(Bn, An, CV_32F);
+    c01.create(Bn, An, CV_32F);
+
+    Mat c00Mat = c00.getMat();
+    Mat c10Mat = c10.getMat();
+    Mat c01Mat = c01.getMat();
+
+    Mat vecX(area.height, area.width, CV_8U);
+    Mat vecY(area.height, area.width, CV_8U);
+
+    for (int i = 0; i < An; i++)
+    {
+        for (int o = 0; o < Bn; o++)
+        {
+            int centerX = (i * radiusX) + radiusX;
+            int centerY = (o * radiusY) + radiusY;
+            Rect area(centerX - radiusX, centerY - radiusY, kernelMat.cols, kernelMat.rows);
+
+            Mat roiImage(matrixPadded, area);
+            Mat roiMask(maskPadded, area);
+            Mat kernelMasked;
+
+            kernelMat.copyTo(kernelMasked, roiMask);
+
+            Mat numerator;
+            multiply(roiImage, kernelMasked, numerator, 1, CV_32F);
+
+            c00Mat.row(o).col(i) = sum(numerator) / sum(kernelMasked);
+        }
+    }
+}
+
