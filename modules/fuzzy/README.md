@@ -23,4 +23,4 @@ The module covers:
 * F0 processing (fuzzy_F0_math.cpp): Functions for computation of the image F0 components and inverse F0-transform.
 * Fuzzy image processing (fuzzy_image.cpp): Functions aimed to image processing currently including image inpainting and image filtering.
 
-There are also tests in test_image.cpp using resources from opencv_extra, and samples in inpainting.cpp and filtering.cpp.
+There are also tests in test_image.cpp using resources from opencv_extra, and samples in fuzzy_inpainting.cpp and fuzzy_filtering.cpp.
