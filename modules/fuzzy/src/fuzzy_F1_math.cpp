@@ -429,3 +429,205 @@ void ft::DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &o
 
     output = output(Rect(radiusX, radiusY, image.cols, image.rows));
 }
+
+void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchWidth, int radius)
+{
+    std::vector<Mat> patches;
+
+    image.copyTo(output);
+
+    Mat kernel;
+
+    ft::createKernel(ft::LINEAR, radius, kernel);
+
+    int radiusX = (patchWidth - 1) / 2;
+    int radiusY = (patchWidth - 1) / 2;
+    int An = image.cols / radiusX - 1;
+    int Bn = image.rows / radiusY - 1;
+
+    //Mat imagePadded;
+    //Mat maskPadded;
+
+    //copyMakeBorder(image, imagePadded, radiusY, patchWidth, radiusX, patchWidth, BORDER_CONSTANT, Scalar(0));
+    //copyMakeBorder(mask, maskPadded, radiusY, patchWidth, radiusX, patchWidth, BORDER_CONSTANT, Scalar(0));
+
+    // Make database of patches
+
+    for (int i = 0; i < An; i++)
+    {
+        for (int o = 0; o < Bn; o++)
+        {
+            Mat patch;
+
+            int centerX = (i * radiusX) + radiusX;
+
+            int centerY = (o * radiusY) + radiusY;
+
+            Rect area(centerX - patchWidth / 2, centerY - patchWidth / 2, patchWidth, patchWidth);
+
+
+            Mat roiMask(mask, area);
+
+
+            if (countNonZero(roiMask) < roiMask.total())
+
+            {
+
+                continue;
+
+            }
+
+
+            Mat roiImage(image, area);
+
+            patch = roiImage;
+
+            patches.push_back(patch);
+
+            /*
+            stringstream fileName;
+            fileName << "check//" << i << "_" << o << "_" "patch.png";
+            imwrite(fileName.str().c_str(), patch.ROI);
+            */
+        }
+    }
+
+    //cout << "Database created." << endl << endl;
+
+    // Second step
+
+    Mat smaller;
+
+    Mat kernelMorf = getStructuringElement(MORPH_RECT, Size(3,3));
+
+    dilate(mask, smaller, kernelMorf);
+
+
+    Mat unknownPixels;
+
+    findNonZero(~mask - ~smaller, unknownPixels);
+
+
+    int squarePosition = 0;
+
+
+    while(unknownPixels.total() > 0)
+
+    {
+
+        while(unknownPixels.total() > 0)
+
+        {
+            squarePosition++;
+
+            Point center = unknownPixels.at<Point>(0, 0);
+            Rect area(center.x - patchWidth / 2, center.y - patchWidth / 2, patchWidth, patchWidth);
+
+            Mat roiImage(image, area);
+            Mat roiMask(mask, area);
+            Mat oneMask = Mat::ones(roiMask.size(), CV_8U);
+
+            Mat maskedImage;
+            roiImage.copyTo(maskedImage, roiMask);
+
+            Mat c00, c10, c01;
+
+            //inpFT12D_polynomial(maskedImage, kernel, oneMask, c00, c10, c01);
+
+            float diffMin00 = 100000.0f;
+            float diffMin10 = 100000.0f;
+            float diffMin01 = 100000.0f;
+
+            /*
+            stringstream fileName2;
+            fileName2 << "old_" << squarePosition << "_patch.png";
+            imwrite(fileName2.str().c_str(), maskedImage);
+            */
+
+            Mat patch;
+
+            for (std::vector<Mat>::const_iterator it = patches.begin(); it != patches.end(); ++it)
+            {
+                Mat maskedPatch;
+                (*it).copyTo(maskedPatch, roiMask);
+
+                Mat patchC00, patchC01, patchC10;
+                // TOHLE TU MA BYT
+                //inpFT12D_polynomial(maskedPatch, kernel, oneMask, patchC00, patchC10, patchC01);
+
+                /*
+                if (c00 * patchC00 < 0 ||
+                    c10 * patchC10 < 0 ||
+                    c01 * patchC01 < 0)
+                {
+                    continue;
+                }
+                */
+
+                Mat complete00 = abs(c00 - patchC00);
+                Mat complete10 = abs(c10 - patchC10);
+                Mat complete01 = abs(c01 - patchC01);
+
+                float averageDiff00 = sum(complete00)[0] / complete00.total();
+                float averageDiff10 = sum(complete10)[0] / complete10.total();
+                float averageDiff01 = sum(complete01)[0] / complete01.total();
+
+                float metricCurrent = (averageDiff00 + averageDiff01 + averageDiff10) / 3.0f;
+                float metricMin = (diffMin00 + diffMin01 + diffMin10) / 3.0f;
+
+                /*
+                stringstream fileName;
+                fileName << "irina//" << squarePosition << "_" << metricCurrent << "_patch.png";
+                imwrite(fileName.str().c_str(), (*it));
+                */
+
+                /*
+                cout << averageDiff00 << endl << endl;
+                cout << averageDiff10 << endl << endl;
+                cout << averageDiff10 << endl << endl;
+                */
+
+                if (metricCurrent < metricMin)
+                {
+                    diffMin00 = averageDiff00;
+                    diffMin01 = averageDiff01;
+                    diffMin10 = averageDiff10;
+
+                    patch = *it;
+                }
+            }
+
+            //cout << squarePosition << "__" << min00 << ", " << min10 << ", " << min01 << endl;
+            //cout << squarePosition << "_chosen" << endl;
+
+            /*
+            stringstream fileName;
+            fileName << "win_" << squarePosition << "_patch.png";
+            imwrite(fileName.str().c_str(), patch.ROI);
+
+            stringstream fileName2;
+            fileName2 << "old_" << squarePosition << "_patch.png";
+            imwrite(fileName2.str().c_str(), maskedImage);
+            */
+
+            Mat roiOutput(output, area);
+
+            /*
+            cout << roiOutput << endl << endl;
+            cout << ~roiMask << endl << endl;
+            cout << patch.ROI << endl << endl;
+            */
+
+            patch.copyTo(roiOutput, ~roiMask);
+            patch.copyTo(roiImage, ~roiMask);
+
+            roiMask = 255;
+            findNonZero(~mask - ~smaller, unknownPixels);
+
+            //imwrite("wallOutput_step.png", output);
+        }
+
+        dilate(mask, smaller, kernelMorf);
+        findNonZero(~mask - ~smaller, unknownPixels);
+    }
+}
