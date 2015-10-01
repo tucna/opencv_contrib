@@ -67,7 +67,15 @@ void ft::createKernel(int function, int radius, cv::OutputArray kernel, const in
 
     A.at<float>(0, radius) = 1;
 
-    if (function == ft::LINEAR)
+    if (function == ft::CONST)
+    {
+        float a = 1.0f;
+
+        A = a;
+
+        mulTransposed(A, kernelOneChannel, true);
+    }
+    else if (function == ft::LINEAR)
     {
         float a = 1.0f / radius;
 

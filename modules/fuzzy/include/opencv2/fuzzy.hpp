@@ -73,7 +73,8 @@ namespace ft
     enum
     {
         LINEAR = 1,
-        SINUS = 2
+        SINUS = 2,
+        CONST = 3
     };
 
     enum
