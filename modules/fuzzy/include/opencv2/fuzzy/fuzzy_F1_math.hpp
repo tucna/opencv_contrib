@@ -50,14 +50,19 @@ namespace cv
 
 namespace ft
 {
+    // Somehow tested
     CV_EXPORTS void FT12D_components(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray components);
     CV_EXPORTS void FT12D_polynomial(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray c00, cv::OutputArray c10, cv::OutputArray c01, cv::OutputArray components);
     CV_EXPORTS void FT12D_createPolynomMatrixVertical(int radius, cv::OutputArray matrix, const int chn = 1);
     CV_EXPORTS void FT12D_createPolynomMatrixHorizontal(int radius, cv::OutputArray matrix, const int chn = 1);
+
+    // Not tested
     CV_EXPORTS void FT12D_inverseFT(cv::InputArray components, cv::InputArray kernel, cv::OutputArray output, int width, int height);
     CV_EXPORTS void FT12D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask);
-    CV_EXPORTS void DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int radius);
     CV_EXPORTS void FT12D_inverseIrina(const Mat &c01, const Mat &c10, const Mat &kernel, Mat &S10, Mat &S01, Mat &iFT, int width, int height);
+
+    // Temporary - have to be improved!
+    CV_EXPORTS void DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int radius);
     CV_EXPORTS void patchInpaint(Mat &image, Mat &mask, cv::Mat &output, int patchWidth, int radius);
 }
 }
