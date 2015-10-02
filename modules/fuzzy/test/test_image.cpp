@@ -50,13 +50,12 @@ class CV_FuzzyImageTest : public cvtest::BaseTest
 public:
     CV_FuzzyImageTest();
     ~CV_FuzzyImageTest();
+
 protected:
     void run(int);
 };
 
-CV_FuzzyImageTest::CV_FuzzyImageTest()
-{
-}
+CV_FuzzyImageTest::CV_FuzzyImageTest() {}
 CV_FuzzyImageTest::~CV_FuzzyImageTest() {}
 
 void CV_FuzzyImageTest::run( int )
@@ -76,7 +75,6 @@ void CV_FuzzyImageTest::run( int )
     }
 
     // Conversion because of comparison.
-
     orig.convertTo(orig, CV_32F);
     exp1.convertTo(exp1, CV_32F);
     exp2.convertTo(exp2, CV_32F);
@@ -120,4 +118,24 @@ void CV_FuzzyImageTest::run( int )
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
-TEST(Fuzzy_image, regression) { CV_FuzzyImageTest test; test.safe_run(); }
+TEST(fuzzy_image, inpainting)
+{
+    //CV_FuzzyImageTest test; test.safe_run();
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "fuzzy/";
+    Mat orig1 = imread(folder + "orig.png");
+    Mat orig2 = imread(folder + "orig.png");
+
+    Mat diff1;
+    absdiff(orig1, orig2, diff1);
+
+    double n1 = cvtest::norm(diff1.reshape(1), NORM_INF, diff1.reshape(1));
+
+    EXPECT_EQ(n1, 0);
+}
+
+TEST(fuzzy_image, pokus)
+{
+    int a = 1;
+    EXPECT_EQ(a, 1);
+}
+
