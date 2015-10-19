@@ -52,24 +52,25 @@ TEST(fuzzy_image, inpainting)
     Mat exp1 = imread(folder + "exp1.png");
     Mat exp2 = imread(folder + "exp2.png");
     Mat exp3 = imread(folder + "exp3.png");
-    Mat mask1 = imread(folder + "mask1.png");
-    Mat mask2 = imread(folder + "mask2.png");
+    Mat mask1 = imread(folder + "mask1.png", IMREAD_GRAYSCALE);
+    Mat mask2 = imread(folder + "mask2.png", IMREAD_GRAYSCALE);
 
     EXPECT_TRUE(!orig.empty() && !exp1.empty() && !exp2.empty() && !exp3.empty() && !mask1.empty() && !mask2.empty());
 
     Mat res1, res2, res3;
     ft::inpaint(orig, mask1, res1, 2, ft::LINEAR, ft::ONE_STEP);
-    //ft::inpaint(orig, mask2, res2, 2, ft::LINEAR, ft::MULTI_STEP);
-    //ft::inpaint(orig, mask2, res3, 2, ft::LINEAR, ft::ITERATIVE);
+    ft::inpaint(orig, mask2, res2, 2, ft::LINEAR, ft::MULTI_STEP);
+    ft::inpaint(orig, mask2, res3, 2, ft::LINEAR, ft::ITERATIVE);
 
-    Mat diff;
-    cv::subtract(exp1, res1, diff, noArray(), CV_32F);
+    res1.convertTo(res1, CV_8UC3);
+    res2.convertTo(res2, CV_8UC3);
+    res3.convertTo(res3, CV_8UC3);
 
-    float n1 = cvtest::norm(diff, NORM_INF);
-    //n2 = cvtest::norm(exp2, res2, NORM_INF);
-    //n3 = cvtest::norm(exp3, res3, NORM_INF);
+    float n1 = cvtest::norm(exp1, res1, NORM_INF);
+    float n2 = cvtest::norm(exp2, res2, NORM_INF);
+    float n3 = cvtest::norm(exp3, res3, NORM_INF);
 
-    EXPECT_FLOAT_EQ(n1 /* + n2 + n3*/, 0);
+    EXPECT_FLOAT_EQ(n1 + n2 + n3, 0);
 }
 
 TEST(fuzzy_image, filtering)
