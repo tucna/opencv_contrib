@@ -45,34 +45,34 @@ using namespace cv;
 
 void ft::FT12D_components(InputArray matrix, InputArray kernel, OutputArray components)
 {
+    Mat c00, c10, c01;
 
+    FT12D_polynomial(matrix, kernel, c00, c10, c01, components);
 }
 
 void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components)
 {
-    // DIFFERENT BORDERS SO MASK IS USED!!! ERASE
     Mat mask = Mat::ones(matrix.size(), CV_8U);
-    //***
 
+    ft::FT12D_polynomial(matrix, kernel, c00, c10, c01, components, mask);
+}
+
+void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components, InputArray mask)
+{
     Mat matrixMat = matrix.getMat();
     Mat kernelMat = kernel.getMat();
+    Mat maskMat = mask.getMat();
 
-    CV_Assert(matrixMat.channels() == 1 && kernelMat.channels() == 1);
+    CV_Assert(matrixMat.channels() == 1 && kernelMat.channels() == 1 && maskMat.channels() == 1);
 
     int radiusX = (kernelMat.cols - 1) / 2;
     int radiusY = (kernelMat.rows - 1) / 2;
     int An = matrixMat.cols / radiusX + 1;
     int Bn = matrixMat.rows / radiusY + 1;
 
-    Mat matrixPadded;
-
+    Mat matrixPadded, maskPadded;
     copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
-
-    //***
-    Mat maskPadded;
-
-    copyMakeBorder(mask, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
-    //***
+    copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
 
     c00.create(Bn, An, CV_32F);
     c10.create(Bn, An, CV_32F);
@@ -84,9 +84,7 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
     Mat c01Mat = c01.getMat();
     Mat componentsMat = components.getMat();
 
-    Mat vecX;
-    Mat vecY;
-
+    Mat vecX, vecY;
     FT12D_createPolynomMatrixVertical(radiusX, vecX);
     FT12D_createPolynomMatrixHorizontal(radiusY, vecY);
 
@@ -99,15 +97,10 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
             Rect area(centerX - radiusX, centerY - radiusY, kernelMat.cols, kernelMat.rows);
 
             Mat roiImage(matrixPadded, area);
-
-            //***
             Mat roiMask(maskPadded, area);
+
             Mat kernelMasked;
-
             kernelMat.copyTo(kernelMasked, roiMask);
-
-            //kernelMat to kernelMasked
-            //***
 
             Mat numerator00, numerator10, numerator01;
             multiply(roiImage, kernelMasked, numerator00, 1, CV_32F);
@@ -119,30 +112,26 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
             multiply(vecX.mul(vecX), kernelMasked, denominator10, 1, CV_32F);
             multiply(vecY.mul(vecY), kernelMasked, denominator01, 1, CV_32F);
 
-            c00Mat.row(o).col(i) = sum(numerator00) / sum(denominator00);
-            c10Mat.row(o).col(i) = sum(numerator10) / sum(denominator10);
-            c01Mat.row(o).col(i) = sum(numerator01) / sum(denominator01);
+            Scalar c00sum, c10sum, c01sum;
+            divide(sum(numerator00), sum(denominator00), c00sum, 1, CV_32F);
+            divide(sum(numerator10), sum(denominator10), c10sum, 1, CV_32F);
+            divide(sum(numerator01), sum(denominator01), c01sum, 1, CV_32F);
 
-            Mat component1(componentsMat, Rect(i * kernelMat.cols, o * kernelMat.rows, kernelMat.cols, kernelMat.rows));
+            c00Mat.row(o).col(i) = c00sum;
+            c10Mat.row(o).col(i) = c10sum;
+            c01Mat.row(o).col(i) = c01sum;
 
-            Mat updatedC10;
-            Mat updatedC01;
-
-            //***
             Mat vecXMasked, vecYMasked;
-
             vecX.copyTo(vecXMasked, roiMask);
             vecY.copyTo(vecYMasked, roiMask);
 
-            //vecX to vecXMasked
-            //vecY to vecYMasked
-            //***
+            Mat updatedC10, updatedC01;
+            multiply(c10sum, vecXMasked, updatedC10, 1, CV_32F);
+            multiply(c01sum, vecYMasked, updatedC01, 1, CV_32F);
 
-            multiply(c10Mat.at<float>(o,i), vecXMasked, updatedC10, 1, CV_32F);
-            multiply(c01Mat.at<float>(o,i), vecYMasked, updatedC01, 1, CV_32F);
-
-            add(updatedC01, updatedC10, component1);
-            add(component1, c00Mat.at<float>(o,i), component1);
+            Mat component(componentsMat, Rect(i * kernelMasked.cols, o * kernelMasked.rows, kernelMasked.cols, kernelMasked.rows));
+            add(updatedC01, updatedC10, component);
+            add(component, c00sum, component);
         }
     }
 }
