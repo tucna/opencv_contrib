@@ -43,6 +43,54 @@
 
 using namespace cv;
 
+// NEW STUFF
+#include <iostream>
+
+
+void ft::FT02D_components(InputArray matrix, InputArray kernel, OutputArray components, int shift)
+{
+    Mat matrixMat = matrix.getMat();
+    Mat kernelMat = kernel.getMat();
+    Mat maskMat = Mat::ones(matrix.size(), CV_8U);
+
+    int radiusX = (kernelMat.cols - 1) / 2;
+    int radiusY = (kernelMat.rows - 1) / 2;
+    int An = (matrixMat.cols - shift) / radiusX + 1;
+    int Bn = (matrixMat.rows - shift) / radiusY + 1;
+
+    Mat matrixPadded;
+    Mat maskPadded;
+
+    copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
+    copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
+
+    components.create(Bn, An, CV_32F);
+    Mat componentsMat = components.getMat();
+
+    for (int i = 0; i < An; i++)
+    {
+        for (int o = 0; o < Bn; o++)
+        {
+            int centerX = (i * radiusX) + radiusX + shift;
+            int centerY = (o * radiusY) + radiusY + shift;
+            Rect area(centerX - radiusX, centerY - radiusY, kernelMat.cols, kernelMat.rows);
+
+            Mat roiImage(matrixPadded, area);
+            Mat roiMask(maskPadded, area);
+            Mat kernelMasked;
+
+            kernelMat.copyTo(kernelMasked, roiMask);
+
+            Mat numerator;
+            multiply(roiImage, kernelMasked, numerator, 1, CV_32F);
+
+            componentsMat.row(o).col(i) = sum(numerator) / sum(kernelMasked);
+        }
+    }
+}
+
+// --
+
 void ft::FT02D_components(InputArray matrix, InputArray kernel, OutputArray components, InputArray mask)
 {
     Mat matrixMat = matrix.getMat();
