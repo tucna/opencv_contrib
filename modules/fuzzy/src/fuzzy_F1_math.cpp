@@ -41,6 +41,11 @@
 
 #include "precomp.hpp"
 
+// DELETE
+#include <iostream>
+
+
+
 using namespace cv;
 
 void ft::FT12D_components(InputArray matrix, InputArray kernel, OutputArray components)
@@ -432,12 +437,14 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
     int radiusX = patchWidth / 2;
     int radiusY = patchWidth / 2;
 
-    int patchCount = 0;
+    bool duplicity = false;
 
     for (int i = radiusX; i < image.cols - radiusX; i++)
     {
         for (int o = radiusY; o < image.rows - radiusY; o++)
         {
+            duplicity = false;
+
             Mat patch;
             Rect area(i - radiusX, o - radiusY, patchWidth, patchWidth);
 
@@ -451,11 +458,33 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
             Mat roiImage(image, area);
 
             patch = roiImage;
-            patches.push_back(patch);
 
-            patchCount++;
+            // Check if it is there
+            for (std::vector<Mat>::const_iterator it = patches.begin(); it != patches.end(); ++it)
+            {
+                Mat testedPatch = *it;
+                Mat diffPatch;
+
+                absdiff(patch, testedPatch, diffPatch);
+
+                if (sum(diffPatch)[0] < 30000)
+                {
+                    duplicity = true;
+                    break;
+                }
+            }
+            // ---
+
+            if (duplicity == false)
+            {
+                patches.push_back(patch);
+            }
+
+            std::cout << patches.size() << " patches. " << i << ", " << o << std::endl;
         }
     }
+
+    std::cout << std::endl << "Database created - " << patches.size() << " patches." << std::endl;
 
     // Second step
     Mat smaller;
@@ -528,7 +557,7 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
             //fileName3 << "output//out_" << squarePosition << "_patch.png";
             //imwrite(fileName3.str().c_str(), output);
 
-            imwrite("output//output_step.png", output);
+            //imwrite("output//output_step.png", output);
         }
 
         dilate(mask, smaller, kernelMorf);
