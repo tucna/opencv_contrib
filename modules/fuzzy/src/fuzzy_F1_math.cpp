@@ -43,6 +43,7 @@
 
 // DELETE
 #include <iostream>
+#include <windows.h>
 
 
 
@@ -424,6 +425,87 @@ void ft::DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &o
     output = output(Rect(radiusX, radiusY, image.cols, image.rows));
 }
 
+void inpaintEvaluate(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components, InputArray mask)
+{
+    Mat matrixMat = matrix.getMat();
+    Mat kernelMat = kernel.getMat();
+    Mat maskMat = mask.getMat();
+
+    CV_Assert(matrixMat.channels() == 1 && kernelMat.channels() == 1 && maskMat.channels() == 1);
+
+    int radiusX = (kernelMat.cols - 1) / 2;
+    int radiusY = (kernelMat.rows - 1) / 2;
+    int An = matrixMat.cols / radiusX + 1;
+    int Bn = matrixMat.rows / radiusY + 1;
+
+    Mat matrixPadded, maskPadded;
+    copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
+    copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
+
+    c00.create(Bn, An, CV_32F);
+    c10.create(Bn, An, CV_32F);
+    c01.create(Bn, An, CV_32F);
+    //components.create(Bn * kernelMat.rows, An * kernelMat.cols, CV_32F);
+
+    Mat c00Mat = c00.getMat();
+    Mat c10Mat = c10.getMat();
+    Mat c01Mat = c01.getMat();
+    //Mat componentsMat = components.getMat();
+
+    Mat vecX, vecY;
+    ft::FT12D_createPolynomMatrixVertical(radiusX, vecX);
+    ft::FT12D_createPolynomMatrixHorizontal(radiusY, vecY);
+
+    for (int i = 0; i < An; i++)
+    {
+        for (int o = 0; o < Bn; o++)
+        {
+            int centerX = (i * radiusX) + radiusX;
+            int centerY = (o * radiusY) + radiusY;
+            Rect area(centerX - radiusX, centerY - radiusY, kernelMat.cols, kernelMat.rows);
+
+            Mat roiImage(matrixPadded, area);
+            Mat roiMask(maskPadded, area);
+
+            Mat kernelMasked;
+            kernelMat.copyTo(kernelMasked, roiMask);
+
+            Mat numerator00, numerator10, numerator01;
+            multiply(roiImage, kernelMasked, numerator00, 1, CV_32F);
+            multiply(numerator00, vecX, numerator10, 1, CV_32F);
+            multiply(numerator00, vecY, numerator01, 1, CV_32F);
+
+            Mat denominator00, denominator10, denominator01;
+            denominator00 = kernelMasked;
+            multiply(vecX.mul(vecX), kernelMasked, denominator10, 1, CV_32F);
+            multiply(vecY.mul(vecY), kernelMasked, denominator01, 1, CV_32F);
+
+            Scalar c00sum, c10sum, c01sum;
+            divide(sum(numerator00), sum(denominator00), c00sum, 1, CV_32F);
+            divide(sum(numerator10), sum(denominator10), c10sum, 1, CV_32F);
+            divide(sum(numerator01), sum(denominator01), c01sum, 1, CV_32F);
+
+            c00Mat.row(o).col(i) = c00sum;
+            c10Mat.row(o).col(i) = c10sum;
+            c01Mat.row(o).col(i) = c01sum;
+
+            /*
+            Mat vecXMasked, vecYMasked;
+            vecX.copyTo(vecXMasked, roiMask);
+            vecY.copyTo(vecYMasked, roiMask);
+
+            Mat updatedC10, updatedC01;
+            multiply(c10sum, vecXMasked, updatedC10, 1, CV_32F);
+            multiply(c01sum, vecYMasked, updatedC01, 1, CV_32F);
+
+            Mat component(componentsMat, Rect(i * kernelMasked.cols, o * kernelMasked.rows, kernelMasked.cols, kernelMasked.rows));
+            add(updatedC01, updatedC10, component);
+            add(component, c00sum, component);
+            */
+        }
+    }
+}
+
 void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchWidth, int radius)
 {
     std::vector<Mat> patches;
@@ -467,7 +549,7 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
 
                 absdiff(patch, testedPatch, diffPatch);
 
-                if (sum(diffPatch)[0] < 30000)
+                if (sum(diffPatch)[0] < 5)
                 {
                     duplicity = true;
                     break;
@@ -484,7 +566,7 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
         }
     }
 
-    std::cout << std::endl << "Database created - " << patches.size() << " patches." << std::endl;
+    std::cout << std::endl << "Database created - " << patches.size() << " patches." << std::endl << std::endl;
 
     // Second step
     Mat smaller;
@@ -500,6 +582,8 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
     {
         while(unknownPixels.total() > 0)
         {
+            DWORD iterationStart = GetTickCount();
+
             squarePosition++;
 
             Point center = unknownPixels.at<Point>(0, 0);
@@ -509,13 +593,13 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
             Mat roiMask(mask, area);
             Mat maskedImage;
 
-            roiImage.copyTo(maskedImage, roiMask);
+            //roiImage.copyTo(maskedImage, roiMask);
 
             Mat c00, c10, c01, comp;
 
-            ft::FT12D_polynomial(maskedImage, kernel, c00, c10, c01, comp);
+            inpaintEvaluate(roiImage, kernel, c00, c10, c01, comp, roiMask);
 
-            Scalar diffMin00  = 100000.0f;
+            Scalar diffMin00 = 100000.0f;
             Scalar diffMin10 = 100000.0f;
             Scalar diffMin01 = 100000.0f;
 
@@ -524,14 +608,14 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
             for (std::vector<Mat>::const_iterator it = patches.begin(); it != patches.end(); ++it)
             {
                 Mat maskedPatch;
-                (*it).copyTo(maskedPatch, roiMask);
+                //(*it).copyTo(maskedPatch, roiMask);
 
                 Mat patchC00, patchC01, patchC10, patchComp;
-                ft::FT12D_polynomial(maskedPatch, kernel, patchC00, patchC10, patchC01, patchComp);
+                inpaintEvaluate((*it), kernel, patchC00, patchC10, patchC01, patchComp, roiMask);
 
                 Scalar averageDiff00 = mean(abs(c00 - patchC00));
                 Scalar averageDiff10 = mean(abs(c10 - patchC10));
-                Scalar averageDiff01 = mean(abs(c01 - patchC01));;
+                Scalar averageDiff01 = mean(abs(c01 - patchC01));
 
                 Scalar metricCurrent = (averageDiff00 + averageDiff01 + averageDiff10) / 3.0f;
                 Scalar metricMin = (diffMin00 + diffMin01 + diffMin10) / 3.0f;
@@ -552,6 +636,9 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
 
             roiMask = 255;
             findNonZero(~mask - ~smaller, unknownPixels);
+
+            std::cout << GetTickCount() - iterationStart << "ms takes one iteration." << std::endl;
+
 
             //stringstream fileName3;
             //fileName3 << "output//out_" << squarePosition << "_patch.png";
