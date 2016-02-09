@@ -77,8 +77,8 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
     int Bn = matrixMat.rows / radiusY + 1;
 
     Mat matrixPadded, maskPadded;
-    copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
-    copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
+    copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_ISOLATED, Scalar(0));
+    copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_ISOLATED, Scalar(0));
 
     c00.create(Bn, An, CV_32F);
     c10.create(Bn, An, CV_32F);
@@ -439,8 +439,8 @@ void inpaintEvaluate(InputArray matrix, InputArray kernel, OutputArray c00, Outp
     int Bn = matrixMat.rows / radiusY + 1;
 
     Mat matrixPadded, maskPadded;
-    copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
-    copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_CONSTANT, Scalar(0));
+    copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_ISOLATED, Scalar(0));
+    copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_ISOLATED, Scalar(0));
 
     c00.create(Bn, An, CV_32F);
     c10.create(Bn, An, CV_32F);
