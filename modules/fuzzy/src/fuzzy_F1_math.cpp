@@ -45,8 +45,6 @@
 #include <iostream>
 #include <windows.h>
 
-
-
 using namespace cv;
 
 void ft::FT12D_components(InputArray matrix, InputArray kernel, OutputArray components)
@@ -431,30 +429,26 @@ void inpaintEvaluate(InputArray matrix, InputArray kernel, OutputArray c00, Outp
     Mat kernelMat = kernel.getMat();
     Mat maskMat = mask.getMat();
 
-    CV_Assert(matrixMat.channels() == 1 && kernelMat.channels() == 1 && maskMat.channels() == 1);
-
     int radiusX = (kernelMat.cols - 1) / 2;
     int radiusY = (kernelMat.rows - 1) / 2;
     int An = matrixMat.cols / radiusX + 1;
     int Bn = matrixMat.rows / radiusY + 1;
 
     Mat matrixPadded, maskPadded;
-    copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_ISOLATED, Scalar(0));
+    copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_ISOLATED, Scalar(0,0,0));
     copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_ISOLATED, Scalar(0));
 
     c00.create(Bn, An, CV_32F);
     c10.create(Bn, An, CV_32F);
     c01.create(Bn, An, CV_32F);
-    //components.create(Bn * kernelMat.rows, An * kernelMat.cols, CV_32F);
 
     Mat c00Mat = c00.getMat();
     Mat c10Mat = c10.getMat();
     Mat c01Mat = c01.getMat();
-    //Mat componentsMat = components.getMat();
 
     Mat vecX, vecY;
-    ft::FT12D_createPolynomMatrixVertical(radiusX, vecX);
-    ft::FT12D_createPolynomMatrixHorizontal(radiusY, vecY);
+    ft::FT12D_createPolynomMatrixVertical(radiusX, vecX, 3);
+    ft::FT12D_createPolynomMatrixHorizontal(radiusY, vecY, 3);
 
     for (int i = 0; i < An; i++)
     {
@@ -488,32 +482,18 @@ void inpaintEvaluate(InputArray matrix, InputArray kernel, OutputArray c00, Outp
             c00Mat.row(o).col(i) = c00sum;
             c10Mat.row(o).col(i) = c10sum;
             c01Mat.row(o).col(i) = c01sum;
-
-            /*
-            Mat vecXMasked, vecYMasked;
-            vecX.copyTo(vecXMasked, roiMask);
-            vecY.copyTo(vecYMasked, roiMask);
-
-            Mat updatedC10, updatedC01;
-            multiply(c10sum, vecXMasked, updatedC10, 1, CV_32F);
-            multiply(c01sum, vecYMasked, updatedC01, 1, CV_32F);
-
-            Mat component(componentsMat, Rect(i * kernelMasked.cols, o * kernelMasked.rows, kernelMasked.cols, kernelMasked.rows));
-            add(updatedC01, updatedC10, component);
-            add(component, c00sum, component);
-            */
         }
     }
 }
 
-void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchWidth, int radius)
+void patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchWidth, int radius)
 {
     std::vector<Mat> patches;
 
     image.copyTo(output);
 
     Mat kernel;
-    ft::createKernel(ft::LINEAR, radius, kernel);
+    ft::createKernel(ft::LINEAR, radius, kernel, 3);
 
     // Make database of patches
     int radiusX = patchWidth / 2;
@@ -541,32 +521,11 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
 
             patch = roiImage;
 
-            // Check if it is there
-            for (std::vector<Mat>::const_iterator it = patches.begin(); it != patches.end(); ++it)
-            {
-                Mat testedPatch = *it;
-                Mat diffPatch;
-
-                absdiff(patch, testedPatch, diffPatch);
-
-                if (sum(diffPatch)[0] < 5)
-                {
-                    duplicity = true;
-                    break;
-                }
-            }
-            // ---
-
-            if (duplicity == false)
-            {
-                patches.push_back(patch);
-            }
-
-            std::cout << patches.size() << " patches. " << i << ", " << o << std::endl;
+            patches.push_back(patch);
         }
     }
 
-    std::cout << std::endl << "Database created - " << patches.size() << " patches." << std::endl << std::endl;
+    //std::cout << std::endl << "Database created - " << patches.size() << " patches." << std::endl << std::endl;
 
     // Second step
     Mat smaller;
@@ -582,8 +541,6 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
     {
         while(unknownPixels.total() > 0)
         {
-            DWORD iterationStart = GetTickCount();
-
             squarePosition++;
 
             Point center = unknownPixels.at<Point>(0, 0);
@@ -591,9 +548,6 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
 
             Mat roiImage(image, area);
             Mat roiMask(mask, area);
-            Mat maskedImage;
-
-            //roiImage.copyTo(maskedImage, roiMask);
 
             Mat c00, c10, c01, comp;
 
@@ -608,7 +562,6 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
             for (std::vector<Mat>::const_iterator it = patches.begin(); it != patches.end(); ++it)
             {
                 Mat maskedPatch;
-                //(*it).copyTo(maskedPatch, roiMask);
 
                 Mat patchC00, patchC01, patchC10, patchComp;
                 inpaintEvaluate((*it), kernel, patchC00, patchC10, patchC01, patchComp, roiMask);
@@ -637,14 +590,9 @@ void ft::patchInpaint(cv::Mat &image, cv::Mat &mask, cv::Mat &output, int patchW
             roiMask = 255;
             findNonZero(~mask - ~smaller, unknownPixels);
 
-            std::cout << GetTickCount() - iterationStart << "ms takes one iteration." << std::endl;
-
-
             //stringstream fileName3;
             //fileName3 << "output//out_" << squarePosition << "_patch.png";
             //imwrite(fileName3.str().c_str(), output);
-
-            //imwrite("output//output_step.png", output);
         }
 
         dilate(mask, smaller, kernelMorf);
