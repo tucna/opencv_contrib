@@ -91,7 +91,7 @@ namespace cv {
     return select("ROI selector", img, fromCenter);
   }
 
-  Rect2d ROISelector::select(const std::string& windowName, Mat img, bool showCrossair, bool fromCenter){
+  Rect2d ROISelector::select(const cv::String& windowName, Mat img, bool showCrossair, bool fromCenter){
 
     key=0;
 
@@ -107,7 +107,7 @@ namespace cv {
     // select the object
     setMouseCallback( windowName, mouseHandler, (void *)&selectorParams );
 
-    // end selection process on SPACE (32) BACKSPACE (27) or ENTER (13)
+    // end selection process on SPACE (32) ESC (27) or ENTER (13)
     while(!(key==32 || key==27 || key==13)){
       // draw the selected object
       rectangle(
@@ -141,26 +141,27 @@ namespace cv {
       // reset the image
       selectorParams.image=img.clone();
 
-      //get keyboard event
-      key=waitKey(1);
+      //get keyboard event, extract lower 8 bits for scancode comparison
+      key=waitKey(1) & 0xFF;
     }
 
 
     return selectorParams.box;
   }
 
-  void ROISelector::select(const std::string& windowName, Mat img, std::vector<Rect2d> & boundingBox, bool fromCenter){
+  void ROISelector::select(const cv::String& windowName, Mat img, std::vector<Rect2d> & boundingBox, bool fromCenter){
     std::vector<Rect2d> box;
     Rect2d temp;
     key=0;
 
     // show notice to user
     printf("Select an object to track and then press SPACE or ENTER button!\n" );
-    printf("Finish the selection process by pressing BACKSPACE button!\n" );
+    printf("Finish the selection process by pressing ESC button!\n" );
 
-    // while key is not Backspace
-    while(key!=27){
+    // while key is not ESC (27)
+    for(;;) {
       temp=select(windowName, img, true, fromCenter);
+      if(key==27) break;
       if(temp.width>0 && temp.height>0)
         box.push_back(temp);
     }
@@ -172,12 +173,12 @@ namespace cv {
     return _selector.select("ROI selector", img, true, fromCenter);
   };
 
-  Rect2d selectROI(const std::string& windowName, Mat img, bool showCrossair, bool fromCenter){
+  Rect2d selectROI(const cv::String& windowName, Mat img, bool showCrossair, bool fromCenter){
     printf("Select an object to track and then press SPACE or ENTER button!\n" );
     return _selector.select(windowName,img, showCrossair, fromCenter);
   };
 
-  void selectROI(const std::string& windowName, Mat img, std::vector<Rect2d> & boundingBox, bool fromCenter){
+  void selectROI(const cv::String& windowName, Mat img, std::vector<Rect2d> & boundingBox, bool fromCenter){
     return _selector.select(windowName, img, boundingBox, fromCenter);
   }
 
