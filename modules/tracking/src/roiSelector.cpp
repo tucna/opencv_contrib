@@ -107,10 +107,8 @@ namespace cv {
     // select the object
     setMouseCallback( windowName, mouseHandler, (void *)&selectorParams );
 
-    // extract lower 8 bits for scancode comparison
-    unsigned int key_ = key & 0xFF;
     // end selection process on SPACE (32) ESC (27) or ENTER (13)
-    while(!(key_==32 || key_==27 || key_==13)){
+    while(!(key==32 || key==27 || key==13)){
       // draw the selected object
       rectangle(
         selectorParams.image,
@@ -143,8 +141,8 @@ namespace cv {
       // reset the image
       selectorParams.image=img.clone();
 
-      //get keyboard event
-      key=waitKey(1);
+      //get keyboard event, extract lower 8 bits for scancode comparison
+      key=waitKey(1) & 0xFF;
     }
 
 
@@ -161,8 +159,9 @@ namespace cv {
     printf("Finish the selection process by pressing ESC button!\n" );
 
     // while key is not ESC (27)
-    while(key!=27){
+    for(;;) {
       temp=select(windowName, img, true, fromCenter);
+      if(key==27) break;
       if(temp.width>0 && temp.height>0)
         box.push_back(temp);
     }
