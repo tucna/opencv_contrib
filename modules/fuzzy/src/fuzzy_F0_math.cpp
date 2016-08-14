@@ -43,6 +43,12 @@
 
 using namespace cv;
 
+void ft::FT02D_FAST_process(const Mat &image, const Mat &kernel, Mat &output, const Mat &mask)
+{
+
+}
+
+
 void ft::FT02D_components(InputArray matrix, InputArray kernel, OutputArray components, InputArray mask)
 {
     Mat matrixMat = matrix.getMat();

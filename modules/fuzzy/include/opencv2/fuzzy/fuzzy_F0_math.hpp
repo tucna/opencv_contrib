@@ -112,6 +112,8 @@ namespace ft
     */
     CV_EXPORTS int FT02D_iteration(const Mat &image, const Mat &kernel, Mat &imageOutput, const Mat &mask, Mat &maskOutput, bool firstStop = true);
 
+    CV_EXPORTS void FT02D_FAST_process(const Mat &image, const Mat &kernel, Mat &output, const Mat &mask);
+
     //! @}
 }
 }
