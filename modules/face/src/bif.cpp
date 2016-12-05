@@ -201,13 +201,13 @@ void BIFImpl::computeUnit(int unit_idx, const cv::Mat &img,
             int x1 = std::min(resp.cols, xc + Whalf);
             int area = (y1-y0) * (x1-x0);
 
-            float mean = sum.at<float>(y1,x1) - sum.at<float>(y1,x0)
-                         - sum.at<float>(y0,x1) + sum.at<float>(y0,x0);
+            double mean = sum.at<double>(y1,x1) - sum.at<double>(y1,x0)
+                         - sum.at<double>(y0,x1) + sum.at<double>(y0,x0);
             mean /= area;
 
             double sd = sumsq.at<double>(y1,x1) - sumsq.at<double>(y1,x0)
                         - sumsq.at<double>(y0,x1) + sumsq.at<double>(y0,x0);
-            sd = sqrt(sd / area - mean * mean);
+            sd = sqrt(std::max(0.0, sd / area - mean * mean));
 
             dst.at<float>(pos) = static_cast<float>(sd);
         }
