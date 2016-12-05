@@ -43,6 +43,7 @@
 #include <opencv2/core/ocl.hpp>
 #include "opencl_kernels_dnn.hpp"
 #include "op_im2col.hpp"
+#include "opencl_kernels_dnn.hpp"
 
 namespace cv
 {
@@ -56,8 +57,12 @@ bool im2col_ocl(const UMat &img,
                  int kernel_h, int kernel_w,
                  int pad_h, int pad_w,
                  int stride_h, int stride_w,
+                 int dilation_h, int dilation_w,
                  UMat &col)
 {
+    //TODO
+    CV_Assert(dilation_h == 1 && dilation_w == 1);
+
     int height_col = (height + 2 * pad_h - kernel_h) / stride_h + 1;
     int width_col = (width + 2 * pad_w - kernel_w) / stride_w + 1;
     int channels_col = channels * kernel_h * kernel_w;
@@ -118,5 +123,46 @@ bool col2im_ocl(const UMat &col,
 }
 
 #endif
+}
+}
+
+namespace cv
+{
+namespace dnn
+{
+
+#ifdef HAVE_OPENCL
+void im2col_ocl(UMat &img,
+                int channels, int height, int width,
+                int kernel_h, int kernel_w,
+                int pad_h, int pad_w,
+                int stride_h, int stride_w,
+                int height_out, int width_out,
+                UMat &col)
+{
+    int h_out = height_out;
+    int w_out = width_out;
+
+    CV_Assert(img.isContinuous() && col.isContinuous());
+    CV_Assert(img.total() == (size_t)channels * height * width);
+    CV_Assert(col.total() == (size_t)channels * kernel_h * kernel_w * h_out * w_out);
+
+    ocl::Kernel im2col_ker("im2col", ocl::dnn::im2col_oclsrc);
+    CV_Assert(!im2col_ker.empty());
+
+    im2col_ker.args(ocl::KernelArg::PtrReadOnly(img), (int)img.offset,
+             channels, height, width,
+             kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w,
+             h_out, w_out,
+             ocl::KernelArg::PtrWriteOnly(col), (int)col.offset
+        );
+
+    size_t localSize = ocl::Device::getDefault().maxWorkGroupSize();
+    size_t globalSize = (size_t)channels * h_out * w_out;
+
+    CV_Assert(im2col_ker.run(1, &globalSize, &localSize, true));
+}
+#endif // HAVE_OPENCL
+
 }
 }
