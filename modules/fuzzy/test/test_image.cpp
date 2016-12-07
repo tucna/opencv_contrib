@@ -71,7 +71,7 @@ TEST(fuzzy_image, inpainting)
     double n2 = cvtest::norm(exp2, res2, NORM_INF);
     double n3 = cvtest::norm(exp3, res3, NORM_INF);
 
-    EXPECT_DOUBLE_EQ(n1 + n2 + n3, 0);
+	ASSERT_EQ(0, n1 + n2 + n3);
 }
 
 TEST(fuzzy_image, filtering)
@@ -92,7 +92,7 @@ TEST(fuzzy_image, filtering)
 
     double n1 = cvtest::norm(exp4, res4, NORM_INF);
 
-    EXPECT_DOUBLE_EQ(n1, 0);
+	ASSERT_EQ(0, n1);
 }
 
 TEST(fuzzy_image, kernel)
