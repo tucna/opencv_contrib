@@ -121,7 +121,7 @@ namespace ft
     */
     CV_EXPORTS_W int FT02D_iteration(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask, OutputArray maskOutput, bool firstStop);
 
-    CV_EXPORTS void FT02D_FL_process(const Mat &image, const int radius, OutputArray output);
+    CV_EXPORTS_W void FT02D_FL_process(InputArray image, const int radius, OutputArray output);
 
     //! @}
 }
