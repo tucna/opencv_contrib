@@ -52,6 +52,8 @@ void ft::FT02D_FL_process(InputArray image, const int radius, OutputArray output
 
 	copyMakeBorder(image, imagePadded, radius, borderPadding, radius, borderPadding, BORDER_CONSTANT, Scalar(0));
 
+	cvtColor(imagePadded, imagePadded, COLOR_BGR2YCrCb);
+
 	Mat channel[3];
 	split(imagePadded, channel);
 
@@ -61,9 +63,8 @@ void ft::FT02D_FL_process(InputArray image, const int radius, OutputArray output
 
 	int width = imagePadded.cols;
 	int height = imagePadded.rows;
-	int h = radius;
-	int n_width = width / h + 1;
-	int n_height = height / h + 1;
+	int n_width = width / radius + 1;
+	int n_height = height / radius + 1;
 
 	unsigned short *c_r = new unsigned short[n_width * n_height];
 	unsigned short *c_g = new unsigned short[n_width * n_height];
@@ -74,30 +75,28 @@ void ft::FT02D_FL_process(InputArray image, const int radius, OutputArray output
 	int cy = 0;
 	float num_f;
 	unsigned short wy;
-	unsigned short *wei = new unsigned short[h + 1];
+	unsigned short *wei = new unsigned short[radius + 1];
 
-	for (int i = 0; i <= h; i++)
+	for (int i = 0; i <= radius; i++)
 	{
-		wei[i] = h - i;
+		wei[i] = radius - i;
 	}
 
-    for (int y = radius; y < height - radius; y+=h)
+    for (int y = radius; y < height - radius; y += radius)
     {
         c_pos = cy;
 
-        for (int x = radius; x < width - radius; x+=h)
+        for (int x = radius; x < width - radius; x += radius)
         {
             num = sum_r = sum_g = sum_b = 0;
 
-            for (int y1 = y - h; y1 <= y + h; y1++)
+            for (int y1 = y - radius; y1 <= y + radius; y1++)
             {
-                //if (y1<0 || y1>=height) continue;
                 pos = y1 * width;
                 wy = wei[abs(y1-y)];
 
-                for (int x1=x-h; x1<=x+h; x1++)
+                for (int x1 = x - radius; x1 <= x + radius; x1++)
                 {
-                    //if (x1<0 || x1>=width) continue;
                     c_wei = wei[abs(x1-x)] * wy;
                     pos2   = pos + x1;
                     sum_r += im_r[pos2] * c_wei;
@@ -107,10 +106,9 @@ void ft::FT02D_FL_process(InputArray image, const int radius, OutputArray output
                 }
             }
 
-            num_f = 1.0f / (float)num;
-            c_r[c_pos] = sum_r * num_f;
-            c_g[c_pos] = sum_g * num_f;
-            c_b[c_pos] = sum_b * num_f;
+			c_r[c_pos] = sum_r / (float)num;
+			c_g[c_pos] = sum_g / (float)num;
+			c_b[c_pos] = sum_b / (float)num;
 
             c_pos++;
         }
@@ -125,22 +123,22 @@ void ft::FT02D_FL_process(InputArray image, const int radius, OutputArray output
     uchar *img_g = new uchar[height * width];
     uchar *img_b = new uchar[height * width];
 
-    for (int y = 0; y < height - h; y++)
+    for (int y = 0; y < height - radius; y++)
 	{
-        ly1  = (y % h);
-        ly   = h - ly1;
-        yw   = y / h * n_width;
+        ly1  = (y % radius);
+        ly   = radius - ly1;
+        yw   = y / radius * n_width;
         pos_iFT  = y * width;
         
-		for (int x = 0; x < width - h; x++)
+		for (int x = 0; x < width - radius; x++)
 		{
-            lx1  = (x % h);
-            lx   = h - lx1;
+            lx1  = (x % radius);
+            lx   = radius - lx1;
 
-            p1 = x/h + yw;
-            p2 = p1+1;
-            p3 = p1+n_width;
-            p4 = p3+1;
+            p1 = x / radius + yw;
+            p2 = p1 + 1;
+            p3 = p1 + n_width;
+            p4 = p3 + 1;
 
             w1 = lx * ly;
             w2 = lx1 * ly;
