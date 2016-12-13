@@ -38,9 +38,9 @@ int main(void)
     Mat I = imread("input.png");
 
     // Various masks
-    Mat mask1 = imread("mask1.png");
-    Mat mask2 = imread("mask2.png");
-    Mat mask3 = imread("mask3.png");
+    Mat mask1 = imread("mask1.png", IMREAD_GRAYSCALE);
+    Mat mask2 = imread("mask2.png", IMREAD_GRAYSCALE);
+    Mat mask3 = imread("mask3.png", IMREAD_GRAYSCALE);
 
     // Apply the damage
     Mat input1, input2, input3;
@@ -52,10 +52,10 @@ int main(void)
     // Inpaint with various algorithm
     Mat output1, output2, output3, output4;
 
-    ft::inpaint(input1, mask1, output1, 2, ft::LINEAR, ft::ONE_STEP);
-    ft::inpaint(input2, mask2, output2, 2, ft::LINEAR, ft::MULTI_STEP);
-    ft::inpaint(input3, mask3, output3, 2, ft::LINEAR, ft::MULTI_STEP);
-    ft::inpaint(input3, mask3, output4, 2, ft::LINEAR, ft::ITERATIVE);
+    ft::inpaint(input1, mask1, output1, ft::LINEAR, 2, ft::ONE_STEP);
+    ft::inpaint(input2, mask2, output2, ft::LINEAR, 2, ft::MULTI_STEP);
+    ft::inpaint(input3, mask3, output3, ft::LINEAR, 2, ft::MULTI_STEP);
+    ft::inpaint(input3, mask3, output4, ft::LINEAR, 2, ft::ITERATIVE);
 
     // Save output
     imwrite("output1_inpaint.png", output1);

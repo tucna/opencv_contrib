@@ -43,16 +43,14 @@
 
 using namespace cv;
 
-void ft::FT02D_FL_process(InputArray image, const int radius, OutputArray output)
+void ft::FT02D_FL_process(InputArray matrix, const int radius, OutputArray output)
 {
-	CV_Assert(image.channels() == 3);
+	CV_Assert(matrix.channels() == 3);
 
 	int borderPadding = 2 * radius + 1;
 	Mat imagePadded;
 
-	copyMakeBorder(image, imagePadded, radius, borderPadding, radius, borderPadding, BORDER_CONSTANT, Scalar(0));
-
-	cvtColor(imagePadded, imagePadded, COLOR_BGR2YCrCb);
+	copyMakeBorder(matrix, imagePadded, radius, borderPadding, radius, borderPadding, BORDER_CONSTANT, Scalar(0));
 
 	Mat channel[3];
 	split(imagePadded, channel);
@@ -106,9 +104,11 @@ void ft::FT02D_FL_process(InputArray image, const int radius, OutputArray output
                 }
             }
 
-			c_r[c_pos] = sum_r / (float)num;
-			c_g[c_pos] = sum_g / (float)num;
-			c_b[c_pos] = sum_b / (float)num;
+			num_f = 1.0f / (float)num;
+
+			c_r[c_pos] = sum_r * num_f;
+			c_g[c_pos] = sum_g * num_f;
+			c_b[c_pos] = sum_b * num_f;
 
             c_pos++;
         }
@@ -119,18 +119,21 @@ void ft::FT02D_FL_process(InputArray image, const int radius, OutputArray output
     int p1, p2, p3, p4, yw, w1, w2, w3, w4, lx, ly, lx1, ly1, pos_iFT;
     float num_iFT;
 
-    uchar *img_r = new uchar[height * width];
-    uchar *img_g = new uchar[height * width];
-    uchar *img_b = new uchar[height * width];
+	int output_height = matrix.rows();
+	int output_width = matrix.cols();
 
-    for (int y = 0; y < height - radius; y++)
+    uchar *img_r = new uchar[output_height * output_width];
+    uchar *img_g = new uchar[output_height * output_width];
+    uchar *img_b = new uchar[output_height * output_width];
+
+    for (int y = 0; y < output_height; y++)
 	{
         ly1  = (y % radius);
         ly   = radius - ly1;
         yw   = y / radius * n_width;
-        pos_iFT  = y * width;
+        pos_iFT  = y * output_width;
         
-		for (int x = 0; x < width - radius; x++)
+		for (int x = 0; x < output_width; x++)
 		{
             lx1  = (x % radius);
             lx   = radius - lx1;
@@ -144,22 +147,20 @@ void ft::FT02D_FL_process(InputArray image, const int radius, OutputArray output
             w2 = lx1 * ly;
             w3 = lx * ly1;
             w4 = lx1 * ly1;
-            num_iFT = 1.0f / (float)(w1 + w2 + w3 + w4);
 
-            img_r[pos_iFT] = (c_r[p1]*w1 + c_r[p2]*w2 + c_r[p3]*w3 + c_r[p4]*w4)*num_iFT;
-            img_g[pos_iFT] = (c_g[p1]*w1 + c_g[p2]*w2 + c_g[p3]*w3 + c_g[p4]*w4)*num_iFT;
-            img_b[pos_iFT] = (c_b[p1]*w1 + c_b[p2]*w2 + c_b[p3]*w3 + c_b[p4]*w4)*num_iFT;
-            pos_iFT++;
+			num_iFT = 1.0f / (float)(w1 + w2 + w3 + w4);
+
+            img_r[pos_iFT] = (c_r[p1]*w1 + c_r[p2]*w2 + c_r[p3]*w3 + c_r[p4]*w4) * num_iFT;
+            img_g[pos_iFT] = (c_g[p1]*w1 + c_g[p2]*w2 + c_g[p3]*w3 + c_g[p4]*w4) * num_iFT;
+            img_b[pos_iFT] = (c_b[p1]*w1 + c_b[p2]*w2 + c_b[p3]*w3 + c_b[p4]*w4) * num_iFT;
+            
+			pos_iFT++;
         }
     }
 
-    Mat compR(height, width, CV_8UC1, img_r);
-    Mat compG(height, width, CV_8UC1, img_g);
-    Mat compB(height, width, CV_8UC1, img_b);
-
-    //compR = compR(Rect(radius, radius, image.cols(), image.rows()));
-    //compG = compG(Rect(radius, radius, image.cols(), image.rows()));
-    //compB = compB(Rect(radius, radius, image.cols(), image.rows()));
+    Mat compR(output_height, output_width, CV_8UC1, img_r);
+    Mat compG(output_height, output_width, CV_8UC1, img_g);
+    Mat compB(output_height, output_width, CV_8UC1, img_b);
 
     std::vector<Mat> oComp;
 
