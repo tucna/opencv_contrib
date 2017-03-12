@@ -52,7 +52,7 @@ namespace ft
 {
     // Tested
     CV_EXPORTS void FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components, InputArray mask);
-    CV_EXPORTS void FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components);
+    CV_EXPORTS_W void FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components);
     CV_EXPORTS void FT12D_createPolynomMatrixVertical(int radius, cv::OutputArray matrix, const int chn = 1);
     CV_EXPORTS void FT12D_createPolynomMatrixHorizontal(int radius, cv::OutputArray matrix, const int chn = 1);
     CV_EXPORTS void FT12D_components(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray components);

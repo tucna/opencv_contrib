@@ -92,6 +92,8 @@ namespace ft
         The algorithms are described in paper @cite Perf:rec.
     */
     CV_EXPORTS_W void inpaint(InputArray image, InputArray mask, OutputArray output, int function, int radius, int algorithm);
+	CV_EXPORTS_W void inpaintEx(InputArray image, InputArray mask, InputArray validPixels, OutputArray output, int function, int radius, int algorithm);
+
 
     /** @brief Image filtering
     @param image Input image.
