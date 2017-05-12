@@ -243,7 +243,15 @@ static void gradientHist(const cv::Mat &src, cv::Mat &magnitude, cv::Mat &histog
         float *pHist = histogram.ptr<float>(i/pSize);
 
         for (int j = 0; j < phase.cols; ++j)
-            pHist[cvRound((j/pSize + pPhase[j])*nBins)] += pMagn[j] / CV_SQR(pSize);
+        {
+            int angle = cvRound(pPhase[j]*nBins);
+            if(angle >= nBins)
+            {
+              angle = 0;
+            }
+            const int index = (j/pSize)*nBins + angle;
+            pHist[index] += pMagn[j] / CV_SQR(pSize);
+        }
     }
 }
 
