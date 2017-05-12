@@ -9,8 +9,6 @@
 Test for Tensorflow models loading
 */
 
-#if defined(ENABLE_TF_INCEPTION_TESTS)
-
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 
@@ -30,7 +28,8 @@ TEST(Test_TensorFlow, read_inception)
 {
     Net net;
     {
-        Ptr<Importer> importer = createTensorflowImporter(_tf("tensorflow_inception_graph.pb"));
+        const string model = findDataFile("dnn/tensorflow_inception_graph.pb", false);
+        Ptr<Importer> importer = createTensorflowImporter(model);
         ASSERT_TRUE(importer != NULL);
         importer->populateNet(net);
     }
@@ -41,20 +40,21 @@ TEST(Test_TensorFlow, read_inception)
     resize(sample, input, Size(224, 224));
     input -= 128; // mean sub
 
-    dnn::Blob inputBlob = dnn::Blob::fromImages(input);
+    Mat inputBlob = blobFromImage(input, 1.);
 
     net.setBlob("_input.input", inputBlob);
     net.forward();
 
-    Blob out = net.getBlob("softmax2");
-    std::cout << out.dims() << std::endl;
+    Mat out = net.getBlob("softmax2");
+    std::cout << out.dims << std::endl;
 }
 
 TEST(Test_TensorFlow, inception_accuracy)
 {
     Net net;
     {
-        Ptr<Importer> importer = createTensorflowImporter(_tf("tensorflow_inception_graph.pb"));
+        const string model = findDataFile("dnn/tensorflow_inception_graph.pb", false);
+        Ptr<Importer> importer = createTensorflowImporter(model);
         ASSERT_TRUE(importer != NULL);
         importer->populateNet(net);
     }
@@ -62,19 +62,15 @@ TEST(Test_TensorFlow, inception_accuracy)
     Mat sample = imread(_tf("grace_hopper_227.png"));
     ASSERT_TRUE(!sample.empty());
     resize(sample, sample, Size(224, 224));
-    cv::cvtColor(sample, sample, cv::COLOR_BGR2RGB);
-    dnn::Blob inputBlob = dnn::Blob::fromImages(sample);
+    Mat inputBlob = blobFromImage(sample, 1.);
 
     net.setBlob(".input", inputBlob);
     net.forward();
 
-    Blob out = net.getBlob("softmax2");
-
-    Blob ref = blobFromNPY(_tf("tf_inception_prob.npy"));
+    Mat out = net.getBlob("softmax2");
+    Mat ref = blobFromNPY(_tf("tf_inception_prob.npy"));
 
     normAssert(ref, out);
 }
 
 }
-
-#endif

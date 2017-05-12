@@ -565,11 +565,6 @@ class CV_EXPORTS_W Tracker : public virtual Algorithm
   virtual void read( const FileNode& fn )=0;
   virtual void write( FileStorage& fs ) const=0;
 
-  Ptr<TrackerModel> getModel()
-  {
-    return model;
-  }
-
  protected:
 
   virtual bool initImpl( const Mat& image, const Rect2d& boundingBox ) = 0;
@@ -1369,42 +1364,6 @@ protected:
   //!<  default algorithm for the tracking method.
   String defaultAlgorithm;
 };
-
-class ROISelector {
-public:
-  Rect2d select(Mat img, bool fromCenter = true);
-  Rect2d select(const cv::String& windowName, Mat img, bool showCrossair = true, bool fromCenter = true);
-  void select(const cv::String& windowName, Mat img, std::vector<Rect2d> & boundingBox, bool fromCenter = true);
-
-  struct handlerT{
-    // basic parameters
-    bool isDrawing;
-    Rect2d box;
-    Mat image;
-
-    // parameters for drawing from the center
-    bool drawFromCenter;
-    Point2f center;
-
-    // initializer list
-    handlerT() : isDrawing(false), drawFromCenter(true) {};
-  }selectorParams;
-
-  // to store the tracked objects
-  std::vector<handlerT> objects;
-
-private:
-  static void mouseHandler(int event, int x, int y, int flags, void *param);
-  void opencv_mouse_callback(int event, int x, int y, int, void *param);
-
-  // save the keypressed characted
-  int key;
-};
-
-Rect2d CV_EXPORTS_W selectROI(Mat img, bool fromCenter = true);
-Rect2d CV_EXPORTS_W selectROI(const cv::String& windowName, Mat img, bool showCrossair = true, bool fromCenter = true);
-void CV_EXPORTS_W selectROI(const cv::String& windowName, Mat img, std::vector<Rect2d> & boundingBox, bool fromCenter = true);
-
 
 /************************************ Multi-Tracker Classes ---By Tyan Vladimir---************************************/
 

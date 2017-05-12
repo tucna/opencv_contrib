@@ -39,7 +39,6 @@
 //
 //M*/
 
-#if defined(ENABLE_CAFFE_MODEL_TESTS)
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/core/ocl.hpp>
@@ -61,7 +60,9 @@ static void launchGoogleNetTest()
 {
     Net net;
     {
-        Ptr<Importer> importer = createCaffeImporter(_tf("bvlc_googlenet.prototxt"), _tf("bvlc_googlenet.caffemodel"));
+        const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
+        const string model = findDataFile("dnn/bvlc_googlenet.caffemodel", false);
+        Ptr<Importer> importer = createCaffeImporter(proto, model);
         ASSERT_TRUE(importer != NULL);
         importer->populateNet(net);
     }
@@ -71,24 +72,17 @@ static void launchGoogleNetTest()
     inpMats.push_back( imread(_tf("googlenet_1.jpg")) );
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
-    net.setBlob(".data", Blob::fromImages(inpMats));
+    net.setBlob(".data", blobFromImages(inpMats, 1., false));
     net.forward();
 
-    Blob out = net.getBlob("prob");
-    Blob ref = blobFromNPY(_tf("googlenet_prob.npy"));
+    Mat out = net.getBlob("prob");
+    Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
     normAssert(out, ref);
 }
 
 TEST(Reproducibility_GoogLeNet, Accuracy)
 {
-    OCL_OFF(launchGoogleNetTest());
-}
-
-OCL_TEST(Reproducibility_GoogLeNet, Accuracy)
-{
-    OCL_ON(launchGoogleNetTest());
-    OCL_OFF();
+    launchGoogleNetTest();
 }
 
 }
-#endif
