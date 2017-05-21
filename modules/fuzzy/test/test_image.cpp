@@ -86,7 +86,7 @@ TEST(fuzzy_image, filtering)
     ft::createKernel(ft::LINEAR, 20, kernel, 3);
 
     Mat res4;
-    ft::filter(orig, kernel, res4);
+    ft::filter(orig, res4, ft::LINEAR, 20);
 
     res4.convertTo(res4, CV_8UC3);
 
@@ -98,13 +98,13 @@ TEST(fuzzy_image, filtering)
 TEST(fuzzy_image, kernel)
 {    
     Mat kernel1;
-    ft::createKernel(ft::LINEAR, 2, kernel1);
+    ft::createKernel(ft::LINEAR, 2, kernel1, 1);
 
     Mat vector1 = (Mat_<float>(5,1) << 0, 0.5, 1, 0.5 ,0);
     Mat vector2 = (Mat_<float>(1,5) << 0, 0.5, 1, 0.5 ,0);
 
     Mat kernel2;
-    ft::createKernel(vector1, vector2, kernel2);
+    ft::createKernel(vector1, vector2, kernel2, 1);
 
     float diff = cvtest::norm(kernel1, kernel2, NORM_INF);
 
