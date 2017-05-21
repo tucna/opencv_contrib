@@ -121,6 +121,9 @@ namespace ft
     */
     CV_EXPORTS_W int FT02D_iteration(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask, OutputArray maskOutput, bool firstStop);
 
+    // NEW STUFF
+    CV_EXPORTS void FT02D_components(InputArray matrix, InputArray kernel, OutputArray components, int shift);
+
     //! @}
 }
 }
