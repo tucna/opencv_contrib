@@ -99,7 +99,7 @@ void ft::createKernel(int function, int radius, OutputArray kernel, const int ch
     merge(channels, kernel);
 }
 
-void ft::inpaint(InputArray image, InputArray mask, OutputArray output, int radius, int function, int algorithm)
+void ft::inpaint(InputArray image, InputArray mask, OutputArray output, int function, int radius, int algorithm)
 {
     if (algorithm == ft::ONE_STEP)
     {
@@ -168,9 +168,51 @@ void ft::inpaint(InputArray image, InputArray mask, OutputArray output, int radi
     }
 }
 
-void ft::filter(InputArray image, InputArray kernel, OutputArray output)
+void ft::inpaintEx(InputArray image, InputArray mask, InputArray validPixels, OutputArray output, int function, int radius, int algorithm)
 {
-    Mat mask = Mat::ones(image.size(), CV_8U);
+	if (algorithm == ft::ITERATIVE)
+	{
+		Mat kernel;
+		Mat processingOutput;
+		Mat maskOutput;
+		int state = 0;
+		int currentRadius = radius;
 
-    ft::FT02D_process(image, kernel, output, mask);
+		Mat processingInput;
+		image.getMat().convertTo(processingInput, CV_32F);
+
+		Mat processingMask;
+		mask.copyTo(processingMask);
+
+		do
+		{
+			ft::createKernel(function, currentRadius, kernel, image.channels());
+
+			Mat invMask = 1 - processingMask;
+
+			state = FT02D_iterationEx(processingInput, kernel, processingOutput, processingMask, maskOutput, validPixels);
+
+			maskOutput.copyTo(processingMask);
+			processingOutput.copyTo(processingInput, invMask);
+
+			currentRadius++;
+		} while (state != 0 /*false*/);
+
+		processingInput.copyTo(output);
+	}
+}
+
+void ft::filter(InputArray image, OutputArray output, int function, int radius)
+{
+	if (function == ft::LINEAR)
+	{
+		ft::FT02D_FL_process(image, radius, output);
+	}
+	else
+	{
+		Mat kernel;
+		ft::createKernel(function, radius, kernel, image.channels());
+
+		ft::FT02D_process(image, kernel, output);
+	}
 }

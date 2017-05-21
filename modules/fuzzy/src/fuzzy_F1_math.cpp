@@ -63,25 +63,21 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
 
 void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components, InputArray mask)
 {
-    Mat matrixMat = matrix.getMat();
-    Mat kernelMat = kernel.getMat();
-    Mat maskMat = mask.getMat();
+	CV_Assert(matrix.channels() == kernel.channels() && mask.channels() == 1);
 
-    CV_Assert(matrixMat.channels() == 1 && kernelMat.channels() == 1 && maskMat.channels() == 1);
+    int radiusX = (kernel.cols() - 1) / 2;
+    int radiusY = (kernel.rows() - 1) / 2;
+    int An = matrix.cols() / radiusX + 1;
+    int Bn = matrix.rows() / radiusY + 1;
 
-    int radiusX = (kernelMat.cols - 1) / 2;
-    int radiusY = (kernelMat.rows - 1) / 2;
-    int An = matrixMat.cols / radiusX + 1;
-    int Bn = matrixMat.rows / radiusY + 1;
+	Mat matrixPadded, maskPadded;
+    copyMakeBorder(matrix, matrixPadded, radiusY, kernel.rows(), radiusX, kernel.cols(), BORDER_CONSTANT, Scalar(0));
+    copyMakeBorder(mask, maskPadded, radiusY, kernel.rows(), radiusX, kernel.cols(), BORDER_CONSTANT, Scalar(0));
 
-    Mat matrixPadded, maskPadded;
-    copyMakeBorder(matrixMat, matrixPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_ISOLATED, Scalar(0));
-    copyMakeBorder(maskMat, maskPadded, radiusY, kernelMat.rows, radiusX, kernelMat.cols, BORDER_ISOLATED, Scalar(0));
-
-    c00.create(Bn, An, CV_32F);
-    c10.create(Bn, An, CV_32F);
-    c01.create(Bn, An, CV_32F);
-    components.create(Bn * kernelMat.rows, An * kernelMat.cols, CV_32F);
+    c00.create(Bn, An, CV_MAKETYPE(CV_32F, matrix.channels()));
+    c10.create(Bn, An, CV_MAKETYPE(CV_32F, matrix.channels()));
+    c01.create(Bn, An, CV_MAKETYPE(CV_32F, matrix.channels()));
+    components.create(Bn * kernel.rows(), An * kernel.cols(), CV_MAKETYPE(CV_32F, matrix.channels()));
 
     Mat c00Mat = c00.getMat();
     Mat c10Mat = c10.getMat();
@@ -89,8 +85,8 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
     Mat componentsMat = components.getMat();
 
     Mat vecX, vecY;
-    FT12D_createPolynomMatrixVertical(radiusX, vecX);
-    FT12D_createPolynomMatrixHorizontal(radiusY, vecY);
+    FT12D_createPolynomMatrixVertical(radiusX, vecX, matrix.channels());
+    FT12D_createPolynomMatrixHorizontal(radiusY, vecY, matrix.channels());
 
     for (int i = 0; i < An; i++)
     {
@@ -98,13 +94,13 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
         {
             int centerX = (i * radiusX) + radiusX;
             int centerY = (o * radiusY) + radiusY;
-            Rect area(centerX - radiusX, centerY - radiusY, kernelMat.cols, kernelMat.rows);
+            Rect area(centerX - radiusX, centerY - radiusY, kernel.cols(), kernel.rows());
 
             Mat roiImage(matrixPadded, area);
             Mat roiMask(maskPadded, area);
 
             Mat kernelMasked;
-            kernelMat.copyTo(kernelMasked, roiMask);
+            kernel.copyTo(kernelMasked, roiMask);
 
             Mat numerator00, numerator10, numerator01;
             multiply(roiImage, kernelMasked, numerator00, 1, CV_32F);
@@ -133,8 +129,9 @@ void ft::FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00,
             multiply(c10sum, vecXMasked, updatedC10, 1, CV_32F);
             multiply(c01sum, vecYMasked, updatedC01, 1, CV_32F);
 
-            Mat component(componentsMat, Rect(i * kernelMasked.cols, o * kernelMasked.rows, kernelMasked.cols, kernelMasked.rows));
-            add(updatedC01, updatedC10, component);
+            Mat component(componentsMat, Rect(i * kernel.cols(), o * kernel.rows(), kernel.cols(), kernel.rows()));
+            
+			add(updatedC01, updatedC10, component);
             add(component, c00sum, component);
         }
     }

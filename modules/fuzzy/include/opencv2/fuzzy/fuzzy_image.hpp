@@ -78,9 +78,9 @@ namespace ft
     @param image Input image.
     @param mask Mask used for unwanted area marking.
     @param output Output 32-bit image.
-    @param radius Radius of the basic function.
     @param function Function type could be one of the following:
-        -   **LINEAR** Linear basic function.
+		-   **LINEAR** Linear basic function.
+	@param radius Radius of the basic function.
     @param algorithm Algorithm could be one of the following:
         -   **ONE_STEP** One step algorithm.
         -   **MULTI_STEP** Algorithm automaticaly increasing radius of the basic function.
@@ -91,16 +91,20 @@ namespace ft
     @note
         The algorithms are described in paper @cite Perf:rec.
     */
-    CV_EXPORTS_W void inpaint(InputArray image, InputArray mask, OutputArray output, int radius, int function, int algorithm);
+    CV_EXPORTS_W void inpaint(InputArray image, InputArray mask, OutputArray output, int function, int radius, int algorithm);
+	CV_EXPORTS_W void inpaintEx(InputArray image, InputArray mask, InputArray validPixels, OutputArray output, int function, int radius, int algorithm);
+
 
     /** @brief Image filtering
     @param image Input image.
-    @param kernel Final 32-bit kernel.
     @param output Output 32-bit image.
+	@param function Function type could be one of the following:
+		-   **LINEAR** Linear basic function.
+	@param radius Radius of the basic function.
 
     Filtering of the input image by means of F-transform.
     */
-    CV_EXPORTS_W void filter(InputArray image, InputArray kernel, OutputArray output);
+    CV_EXPORTS_W void filter(InputArray image, OutputArray output, int function, int radius);
 
     //! @}
 }

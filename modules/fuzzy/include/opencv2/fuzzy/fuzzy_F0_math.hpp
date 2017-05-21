@@ -96,7 +96,7 @@ namespace ft
     @param output Output 32-bit array.
     @param mask Mask used for unwanted area marking.
 
-    This function computes F-transfrom and inverse F-transfotm in one step. It is fully sufficient and optimized for **Mat**.
+    This function computes F-transfrom and inverse F-transfotm in one step.
     */
     CV_EXPORTS_AS(FT02D_process1) void FT02D_process(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask);
 
@@ -105,7 +105,7 @@ namespace ft
     @param kernel Kernel used for processing. Function **createKernel** can be used.
     @param output Output 32-bit array.
 
-    This function computes F-transfrom and inverse F-transfotm in one step. It is fully sufficient and optimized for **Mat**.
+    This function computes F-transfrom and inverse F-transfotm in one step.
     */
     CV_EXPORTS_W void FT02D_process(InputArray matrix, InputArray kernel, OutputArray output);
 
@@ -120,6 +120,11 @@ namespace ft
     This function computes iteration of F-transfrom and inverse F-transfotm and handle image and mask change. The function is used in *inpaint* function.
     */
     CV_EXPORTS_W int FT02D_iteration(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask, OutputArray maskOutput, bool firstStop);
+	CV_EXPORTS_W int FT02D_iterationEx(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask, OutputArray maskOutput, InputArray validPixels);
+
+
+    CV_EXPORTS_W void FT02D_FL_process(InputArray matrix, const int radius, OutputArray output);
+	CV_EXPORTS_W void FT02D_FL_process_float(InputArray matrix, const int radius, OutputArray output);
 
     // NEW STUFF
     CV_EXPORTS void FT02D_components(InputArray matrix, InputArray kernel, OutputArray components, int shift);

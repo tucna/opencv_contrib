@@ -59,9 +59,9 @@ TEST(fuzzy_image, inpainting)
     EXPECT_TRUE(!orig.empty() && !exp1.empty() && !exp2.empty() && !exp3.empty() && !mask1.empty() && !mask2.empty());
 
     Mat res1, res2, res3;
-    ft::inpaint(orig, mask1, res1, 2, ft::LINEAR, ft::ONE_STEP);
-    ft::inpaint(orig, mask2, res2, 2, ft::LINEAR, ft::MULTI_STEP);
-    ft::inpaint(orig, mask2, res3, 2, ft::LINEAR, ft::ITERATIVE);
+    ft::inpaint(orig, mask1, res1, ft::LINEAR, 2, ft::ONE_STEP);
+    ft::inpaint(orig, mask2, res2, ft::LINEAR, 2, ft::MULTI_STEP);
+    ft::inpaint(orig, mask2, res3, ft::LINEAR, 2, ft::ITERATIVE);
 
     res1.convertTo(res1, CV_8UC3);
     res2.convertTo(res2, CV_8UC3);
@@ -71,13 +71,28 @@ TEST(fuzzy_image, inpainting)
     float n2 = cvtest::norm(exp2, res2, NORM_INF);
     float n3 = cvtest::norm(exp3, res3, NORM_INF);
 
-    EXPECT_FLOAT_EQ(n1 + n2 + n3, 0);
+    EXPECT_DOUBLE_EQ(n1 + n2 + n3, 0);
 }
 
 TEST(fuzzy_image, filtering)
 {
-    int a = 1;
-    EXPECT_EQ(a, 1);
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "fuzzy/";
+    Mat orig = imread(folder + "orig.png");
+    Mat exp4 = imread(folder + "exp4.png");
+
+    EXPECT_TRUE(!orig.empty() && !exp4.empty());
+
+    Mat kernel;
+    ft::createKernel(ft::LINEAR, 20, kernel, 3);
+
+    Mat res4;
+    ft::filter(orig, kernel, res4);
+
+    res4.convertTo(res4, CV_8UC3);
+
+    double n1 = cvtest::norm(exp4, res4, NORM_INF);
+
+    EXPECT_DOUBLE_EQ(n1, 0);
 }
 
 TEST(fuzzy_image, kernel)
