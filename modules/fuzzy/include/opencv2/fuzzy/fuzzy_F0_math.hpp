@@ -129,6 +129,24 @@ namespace ft
     // NEW STUFF
     CV_EXPORTS void FT02D_components(InputArray matrix, InputArray kernel, OutputArray components, int shift);
 
+    /** @brief Sligtly less accurate version of F0-transfrom computation optimized for higher speed. The methods counts with linear basic function.
+    @param matrix Input 3 channels matrix.
+    @param radius Radius of the **LINEAR** basic function.
+    @param output Output array.
+
+    This function computes F-transfrom and inverse F-transfotm using linear basic function in one step. It is ~10 times faster than **FT02D_process** method.
+    */
+    CV_EXPORTS_W void FT02D_FL_process(InputArray matrix, const int radius, OutputArray output);
+
+    /** @brief Sligtly less accurate version of F0-transfrom computation optimized for higher speed. The methods counts with linear basic function.
+    @param matrix Input 3 channels matrix.
+    @param radius Radius of the **LINEAR** basic function.
+    @param output Output array.
+
+    This function computes F-transfrom and inverse F-transfotm using linear basic function in one step. It is ~9 times faster then **FT02D_process** method and more accurate than **FT02D_FL_process** method.
+    */
+    CV_EXPORTS_W void FT02D_FL_process_float(InputArray matrix, const int radius, OutputArray output);
+
     //! @}
 }
 }

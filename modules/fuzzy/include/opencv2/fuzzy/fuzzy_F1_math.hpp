@@ -42,7 +42,7 @@
 #ifndef __OPENCV_FUZZY_F1_MATH_H__
 #define __OPENCV_FUZZY_F1_MATH_H__
 
-#include "types.hpp"
+#include "opencv2/fuzzy/types.hpp"
 #include "opencv2/core.hpp"
 
 namespace cv
@@ -50,23 +50,107 @@ namespace cv
 
 namespace ft
 {
-    // Tested
-    CV_EXPORTS void FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components, InputArray mask);
-    CV_EXPORTS void FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components);
-    CV_EXPORTS void FT12D_createPolynomMatrixVertical(int radius, cv::OutputArray matrix, const int chn = 1);
-    CV_EXPORTS void FT12D_createPolynomMatrixHorizontal(int radius, cv::OutputArray matrix, const int chn = 1);
-    CV_EXPORTS void FT12D_components(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray components);
+    //! @addtogroup f1_math
+    //! @{
 
-    // Somehow tested
+    /** @brief Computes components of the array using direct F1-transform.
+    @param matrix Input array.
+    @param kernel Kernel used for processing. Function **createKernel** can be used.
+    @param components Output 32-bit array for the components.
 
-    // Not tested
-    CV_EXPORTS void FT12D_inverseFT(cv::InputArray components, cv::InputArray kernel, cv::OutputArray output, int width, int height);
-    CV_EXPORTS void FT12D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask);
-    CV_EXPORTS void FT12D_inverseIrina(const Mat &c01, const Mat &c10, const Mat &kernel, Mat &S10, Mat &S01, Mat &iFT, int width, int height);
+    The function computes linear components using predefined kernel.
+
+    @note
+        F-transform technique of first degreee is described in paper @cite Vlas:FT.
+    */
+    CV_EXPORTS_W void FT12D_components(InputArray matrix, InputArray kernel, OutputArray components);
+
+    /** @brief Computes elements of F1-transform components.
+    @param matrix Input array.
+    @param kernel Kernel used for processing. Function **createKernel** can be used.
+    @param c00 Elements represent average color.
+    @param c10 Elements represent average vertical gradient.
+    @param c01 Elements represent average horizontal gradient.
+    @param components Output 32-bit array for the components.
+    @param mask Mask can be used for unwanted area marking.
+
+    The function computes components and its elements using predefined kernel and mask.
+
+    @note
+        F-transform technique of first degreee is described in paper @cite Vlas:FT.
+    */
+    CV_EXPORTS_AS(FT12D_polynomial1) void FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components, InputArray mask);
+
+    /** @brief Computes elements of F1-transform components.
+    @param matrix Input array.
+    @param kernel Kernel used for processing. Function **createKernel** can be used.
+    @param c00 Elements represent average color.
+    @param c10 Elements represent average vertical gradient.
+    @param c01 Elements represent average horizontal gradient.
+    @param components Output 32-bit array for the components.
+
+    The function computes components and its elements using predefined kernel.
+
+    @note
+        F-transform technique of first degreee is described in paper @cite Vlas:FT.
+    */
+    CV_EXPORTS_W void FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components);
+
+    /** @brief Creates vertical matrix for F1-transform computation.
+    @param radius Radius of the basic function.
+    @param matrix The vertical matrix.
+    @param chn Number of channels.
+
+    The function creates helper vertical matrix for F1-transfrom processing. It is used for gradient computation.
+    */
+    CV_EXPORTS_W void FT12D_createPolynomMatrixVertical(int radius, OutputArray matrix, const int chn);
+
+    /** @brief Creates horizontal matrix for F1-transform computation.
+    @param radius Radius of the basic function.
+    @param matrix The horizontal matrix.
+    @param chn Number of channels.
+
+    The function creates helper horizontal matrix for F1-transfrom processing. It is used for gradient computation.
+    */
+    CV_EXPORTS_W void FT12D_createPolynomMatrixHorizontal(int radius, OutputArray matrix, const int chn);
+
+    /** @brief Computes F1-transfrom and inverse F1-transfrom at once.
+    @param matrix Input matrix.
+    @param kernel Kernel used for processing. Function **createKernel** can be used.
+    @param output Output 32-bit array.
+
+    This function computes F1-transfrom and inverse F1-transfotm in one step. It is fully sufficient and optimized for **Mat**.
+    */
+    CV_EXPORTS_W void FT12D_process(InputArray matrix, InputArray kernel, OutputArray output);
+
+    /** @brief Computes F1-transfrom and inverse F1-transfrom at once.
+    @param matrix Input matrix.
+    @param kernel Kernel used for processing. Function **createKernel** can be used.
+    @param output Output 32-bit array.
+    @param mask Mask used for unwanted area marking.
+
+    This function computes F1-transfrom and inverse F1-transfotm in one step. It is fully sufficient and optimized for **Mat**.
+    */
+    CV_EXPORTS_AS(FT12D_process1) void FT12D_process(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask);
+
+    /** @brief Computes inverse F1-transfrom.
+    @param components Input 32-bit single channel array for the components.
+    @param kernel Kernel used for processing. The same kernel as for components computation must be used.
+    @param output Output 32-bit array.
+    @param width Width of the output array.
+    @param height Height of the output array.
+
+    @note
+        F-transform technique of first degreee is described in paper @cite Vlas:FT.
+    */
+    CV_EXPORTS_W void FT12D_inverseFT(InputArray components, InputArray kernel, OutputArray output, int width, int height);
 
     // Temporary - have to be improved!
+    CV_EXPORTS void FT12D_inverseIrina(const Mat &c01, const Mat &c10, const Mat &kernel, Mat &S10, Mat &S01, Mat &iFT, int width, int height);
     CV_EXPORTS void DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int radius);
     CV_EXPORTS void patchInpaint(Mat &image, Mat &mask, cv::Mat &output, int patchWidth, int radius);
+
+    //! @}
 }
 }
 
