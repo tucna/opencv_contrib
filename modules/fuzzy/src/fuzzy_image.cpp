@@ -67,7 +67,15 @@ void ft::createKernel(int function, int radius, OutputArray kernel, const int ch
 
     A.at<float>(0, radius) = 1;
 
-    if (function == ft::LINEAR)
+    if (function == ft::CONST)
+    {
+        float a = 1.0f;
+
+        A = a;
+
+        mulTransposed(A, kernelOneChannel, true);
+    }
+    else if (function == ft::LINEAR)
     {
         float a = 1.0f / radius;
 
@@ -138,6 +146,7 @@ void ft::inpaint(InputArray image, InputArray mask, OutputArray output, int radi
         image.getMat().convertTo(processingInput, CV_32F);
 
         Mat processingMask;
+        //cvtColor(mask, processingMask, COLOR_BGR2GRAY);
         mask.copyTo(processingMask);
 
         do

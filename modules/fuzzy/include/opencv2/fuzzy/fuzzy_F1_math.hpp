@@ -39,29 +39,35 @@
 //
 //M*/
 
-#ifndef __OPENCV_FUZZY_H__
-#define __OPENCV_FUZZY_H__
+#ifndef __OPENCV_FUZZY_F1_MATH_H__
+#define __OPENCV_FUZZY_F1_MATH_H__
 
-#include "opencv2/fuzzy/types.hpp"
-#include "opencv2/fuzzy/fuzzy_F0_math.hpp"
-#include "opencv2/fuzzy/fuzzy_F1_math.hpp"
-#include "opencv2/fuzzy/fuzzy_image.hpp"
+#include "types.hpp"
+#include "opencv2/core.hpp"
 
-/**
-@defgroup fuzzy Image processing based on fuzzy mathematics
+namespace cv
+{
 
-Namespace for all functions is **ft**. The module brings implementation of the last image processing algorithms based on fuzzy mathematics.
+namespace ft
+{
+    // Tested
+    CV_EXPORTS void FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components, InputArray mask);
+    CV_EXPORTS void FT12D_polynomial(InputArray matrix, InputArray kernel, OutputArray c00, OutputArray c10, OutputArray c01, OutputArray components);
+    CV_EXPORTS void FT12D_createPolynomMatrixVertical(int radius, cv::OutputArray matrix, const int chn = 1);
+    CV_EXPORTS void FT12D_createPolynomMatrixHorizontal(int radius, cv::OutputArray matrix, const int chn = 1);
+    CV_EXPORTS void FT12D_components(cv::InputArray matrix, cv::InputArray kernel, cv::OutputArray components);
 
-  @{
-    @defgroup f0_math Math with F0-transfrom support
+    // Somehow tested
 
-Fuzzy transform (F-transform) of the 0th degree transform whole image to a vector of its components. These components are used in latter computation.
+    // Not tested
+    CV_EXPORTS void FT12D_inverseFT(cv::InputArray components, cv::InputArray kernel, cv::OutputArray output, int width, int height);
+    CV_EXPORTS void FT12D_process(const cv::Mat &image, const cv::Mat &kernel, cv::Mat &output, const cv::Mat &mask);
+    CV_EXPORTS void FT12D_inverseIrina(const Mat &c01, const Mat &c10, const Mat &kernel, Mat &S10, Mat &S01, Mat &iFT, int width, int height);
 
-    @defgroup f_image Fuzzy image processing
+    // Temporary - have to be improved!
+    CV_EXPORTS void DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int radius);
+    CV_EXPORTS void patchInpaint(Mat &image, Mat &mask, cv::Mat &output, int patchWidth, int radius);
+}
+}
 
-Image proceesing based on F-transform is fast to process and easy to understand.
-   @}
-
-*/
-
-#endif // __OPENCV_FUZZY_H__
+#endif // __OPENCV_FUZZY_F1_MATH_H__

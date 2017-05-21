@@ -39,29 +39,59 @@
 //
 //M*/
 
-#ifndef __OPENCV_FUZZY_H__
-#define __OPENCV_FUZZY_H__
+#include "test_precomp.hpp"
 
-#include "opencv2/fuzzy/types.hpp"
-#include "opencv2/fuzzy/fuzzy_F0_math.hpp"
-#include "opencv2/fuzzy/fuzzy_F1_math.hpp"
-#include "opencv2/fuzzy/fuzzy_image.hpp"
+#include <string>
 
-/**
-@defgroup fuzzy Image processing based on fuzzy mathematics
+using namespace std;
+using namespace cv;
 
-Namespace for all functions is **ft**. The module brings implementation of the last image processing algorithms based on fuzzy mathematics.
+TEST(fuzzy_image, inpainting)
+{
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "fuzzy/";
+    Mat orig = imread(folder + "orig.png");
+    Mat exp1 = imread(folder + "exp1.png");
+    Mat exp2 = imread(folder + "exp2.png");
+    Mat exp3 = imread(folder + "exp3.png");
+    Mat mask1 = imread(folder + "mask1.png", IMREAD_GRAYSCALE);
+    Mat mask2 = imread(folder + "mask2.png", IMREAD_GRAYSCALE);
 
-  @{
-    @defgroup f0_math Math with F0-transfrom support
+    EXPECT_TRUE(!orig.empty() && !exp1.empty() && !exp2.empty() && !exp3.empty() && !mask1.empty() && !mask2.empty());
 
-Fuzzy transform (F-transform) of the 0th degree transform whole image to a vector of its components. These components are used in latter computation.
+    Mat res1, res2, res3;
+    ft::inpaint(orig, mask1, res1, 2, ft::LINEAR, ft::ONE_STEP);
+    ft::inpaint(orig, mask2, res2, 2, ft::LINEAR, ft::MULTI_STEP);
+    ft::inpaint(orig, mask2, res3, 2, ft::LINEAR, ft::ITERATIVE);
 
-    @defgroup f_image Fuzzy image processing
+    res1.convertTo(res1, CV_8UC3);
+    res2.convertTo(res2, CV_8UC3);
+    res3.convertTo(res3, CV_8UC3);
 
-Image proceesing based on F-transform is fast to process and easy to understand.
-   @}
+    float n1 = cvtest::norm(exp1, res1, NORM_INF);
+    float n2 = cvtest::norm(exp2, res2, NORM_INF);
+    float n3 = cvtest::norm(exp3, res3, NORM_INF);
 
-*/
+    EXPECT_FLOAT_EQ(n1 + n2 + n3, 0);
+}
 
-#endif // __OPENCV_FUZZY_H__
+TEST(fuzzy_image, filtering)
+{
+    int a = 1;
+    EXPECT_EQ(a, 1);
+}
+
+TEST(fuzzy_image, kernel)
+{    
+    Mat kernel1;
+    ft::createKernel(ft::LINEAR, 2, kernel1);
+
+    Mat vector1 = (Mat_<float>(5,1) << 0, 0.5, 1, 0.5 ,0);
+    Mat vector2 = (Mat_<float>(1,5) << 0, 0.5, 1, 0.5 ,0);
+
+    Mat kernel2;
+    ft::createKernel(vector1, vector2, kernel2);
+
+    float diff = cvtest::norm(kernel1, kernel2, NORM_INF);
+
+    EXPECT_FLOAT_EQ(diff, 0);
+}
