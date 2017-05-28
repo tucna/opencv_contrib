@@ -121,21 +121,7 @@ namespace dnn
           * @details If this parameter is empty or unset then @p outTailShape = [`Wh`.size(0)] will be used,
           * where `Wh` is parameter from setWeights().
           */
-        virtual void setOutShape(const std::vector<int> &outTailShape = std::vector<int>()) = 0;
-
-        /** @brief Set @f$ h_{t-1} @f$ value that will be used in next forward() calls.
-          * @details By-default @f$ h_{t-1} @f$ is inited by zeros and updated after each forward() call.
-          */
-        virtual void setH(const Mat &H) = 0;
-        /** @brief Returns current @f$ h_{t-1} @f$ value (deep copy). */
-        virtual Mat getH() const = 0;
-
-        /** @brief Set @f$ c_{t-1} @f$ value that will be used in next forward() calls.
-          * @details By-default @f$ c_{t-1} @f$ is inited by zeros and updated after each forward() call.
-          */
-        virtual void setC(const Mat &C) = 0;
-        /** @brief Returns current @f$ c_{t-1} @f$ value (deep copy). */
-        virtual Mat getC() const = 0;
+        virtual void setOutShape(const MatShape &outTailShape = MatShape()) = 0;
 
         /** @brief Specifies either interpet first dimension of input blob as timestamp dimenion either as sample.
           *
@@ -289,7 +275,7 @@ namespace dnn
     class CV_EXPORTS ReshapeLayer : public Layer
     {
     public:
-        std::vector<int> newShapeDesc;
+        MatShape newShapeDesc;
         Range newShapeRange;
 
         static Ptr<ReshapeLayer> create(const LayerParams& params);
@@ -343,6 +329,8 @@ namespace dnn
     class CV_EXPORTS ReLULayer : public Layer
     {
     public:
+        float negativeSlope;
+
         static Ptr<ReLULayer> create(const LayerParams &params);
     };
 
@@ -379,6 +367,8 @@ namespace dnn
     class CV_EXPORTS PowerLayer : public Layer
     {
     public:
+        float power, scale, shift;
+
         static Ptr<PowerLayer> create(const LayerParams &params);
     };
 
@@ -409,18 +399,27 @@ namespace dnn
     class CV_EXPORTS BatchNormLayer : public Layer
     {
     public:
+        bool hasWeights, hasBias;
+        float epsilon;
+
         static Ptr<BatchNormLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS MaxUnpoolLayer : public Layer
     {
     public:
+        Size poolKernel;
+        Size poolPad;
+        Size poolStride;
+
         static Ptr<MaxUnpoolLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS ScaleLayer : public Layer
     {
     public:
+        bool hasBias;
+
         static Ptr<ScaleLayer> create(const LayerParams& params);
     };
 

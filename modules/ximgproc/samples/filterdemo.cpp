@@ -10,7 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -39,73 +39,67 @@
 //
 //M*/
 
-#include "../precomp.hpp"
-#include "layers_common.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/ximgproc.hpp"
 
-namespace cv
-{
-namespace dnn
-{
+#include <stdio.h>
 
-class ConcatLayerImpl : public ConcatLayer
+using namespace cv;
+using namespace std;
+
+int main( int argc, const char** argv)
 {
-public:
-    ConcatLayerImpl(const LayerParams& params)
+    float alpha = 1.0f;
+    float sigma = 0.02f;
+    int rows0 = 480;
+    int niters = 10;
+    Mat frame, src, dst;
+
+    const char* window_name = "Anisodiff : Exponential Flux";
+
+    VideoCapture cap;
+    if( argc > 1 )
+        cap.open(argv[1]);
+    else
+        cap.open(0);
+
+    if (!cap.isOpened())
     {
-        setParamsFrom(params);
-        axis = params.get<int>("axis", 1);
+        printf("Cannot initialize video capturing\n");
+        return 0;
     }
 
-    virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
-                                 const int requiredOutputs,
-                                 std::vector<MatShape> &outputs,
-                                 std::vector<MatShape> &internals) const
+    // Create a window
+    namedWindow(window_name, 1);
+
+    // create a toolbar
+    createTrackbar("No. of time steps", window_name, &niters, 30, 0);
+
+    for(;;)
     {
-        CV_Assert(inputs.size() > 0);
-        outputs.clear();
-        outputs.push_back(inputs[0]);
-        int cAxis = clamp(axis, inputs[0]);
+        cap >> frame;
+        if( frame.empty() )
+            break;
 
-        int axisSum = 0;
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            MatShape curShape = inputs[i];
+        if( frame.rows <= rows0 )
+            src = frame;
+        else
+            resize(frame, src, Size(cvRound(480.*frame.cols/frame.rows), 480));
 
-            CV_Assert(curShape.size() == outputs.back().size());
-            for (int curAxis = 0; curAxis < outputs.back().size(); curAxis++)
-            {
-                if (curAxis != cAxis && outputs.back()[curAxis] != curShape[curAxis])
-                    CV_Error(Error::StsBadSize, "Inconsitent shape for ConcatLayer");
-            }
+        float t = (float)getTickCount();
+        ximgproc::anisotropicDiffusion(src, dst, alpha, sigma, niters);
+        t = (float)getTickCount() - t;
+        printf("time: %.1fms\n", t*1000./getTickFrequency());
+        imshow(window_name, dst);
 
-            axisSum += curShape[cAxis];
-        }
-
-        outputs.back()[cAxis] = axisSum;
-
-        return false;
+        // Wait for a key stroke; the same function arranges events processing
+        char c = (char)waitKey(30);
+        if(c >= 0)
+            break;
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
-    {
-        int cAxis = clamp(axis, inputs[0]->dims);
-        Mat& outMat = outputs[0];
-        std::vector<Range> ranges(outputs[0].dims, Range::all());
-
-        ranges[cAxis].start = 0;
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            ranges[cAxis].end = ranges[cAxis].start + inputs[i]->size[cAxis];
-            inputs[i]->copyTo(outMat(&ranges[0]));
-            ranges[cAxis].start = ranges[cAxis].end;
-        }
-    }
-};
-
-Ptr<ConcatLayer> ConcatLayer::create(const LayerParams& params)
-{
-    return Ptr<ConcatLayer>(new ConcatLayerImpl(params));
-}
-
-}
+    return 0;
 }
