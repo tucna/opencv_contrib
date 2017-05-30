@@ -299,6 +299,56 @@ void ft::FT02D_FL_process_float(InputArray matrix, const int radius, OutputArray
     merge(oComp, output);
 }
 
+void ft::FT02D_singleComponent(InputArray matrix, InputArray kernel, const int x, const int y, OutputArray component, InputArray mask)
+{
+    CV_Assert(matrix.channels() == kernel.channels());
+
+    Mat inputMask;
+
+    if (mask.getMat().empty())
+    {
+        inputMask = Mat::ones(matrix.size(), CV_8U);
+    }
+    else
+    {
+        CV_Assert(mask.channels() == 1);
+
+        inputMask = mask.getMat();
+    }
+
+    int radiusX = (kernel.cols() - 1) / 2;
+    int radiusY = (kernel.rows() - 1) / 2;
+
+    Mat matrixPadded;
+    Mat maskPadded;
+
+    copyMakeBorder(matrix, matrixPadded, radiusY, kernel.rows(), radiusX, kernel.cols(), BORDER_CONSTANT, Scalar(0));
+    copyMakeBorder(inputMask, maskPadded, radiusY, kernel.rows(), radiusX, kernel.cols(), BORDER_CONSTANT, Scalar(0));
+
+    component.create(1, 1, CV_MAKETYPE(CV_32F, matrix.channels()));
+
+    Mat componentMat = component.getMat();
+
+    int centerX = x + radiusX;
+    int centerY = y + radiusY;
+    Rect area(centerX - radiusX, centerY - radiusY, kernel.cols(), kernel.rows());
+
+    Mat roiImage(matrixPadded, area);
+    Mat roiMask(maskPadded, area);
+    Mat kernelMasked;
+
+    kernel.copyTo(kernelMasked, roiMask);
+
+    Mat numerator;
+    multiply(roiImage, kernelMasked, numerator, 1, CV_32F);
+
+    Scalar value;
+    divide(sum(numerator), sum(kernelMasked), value, 1, CV_32F);
+
+    componentMat.row(0).col(0).setTo(value);
+}
+
+
 void ft::FT02D_components(InputArray matrix, InputArray kernel, OutputArray components, InputArray mask)
 {
     CV_Assert(matrix.channels() == kernel.channels());

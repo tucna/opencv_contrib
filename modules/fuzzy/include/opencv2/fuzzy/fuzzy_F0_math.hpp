@@ -66,6 +66,8 @@ namespace ft
      */
     CV_EXPORTS_W void FT02D_components(InputArray matrix, InputArray kernel, OutputArray components, InputArray mask = noArray());
 
+    CV_EXPORTS_W void FT02D_singleComponent(InputArray matrix, InputArray kernel, const int x, const int y, OutputArray component, InputArray mask = noArray());
+
     /** @brief Computes inverse F0-transfrom.
     @param components Input 32-bit float single channel array for the components.
     @param kernel Kernel used for processing. Function **createKernel** can be used.
