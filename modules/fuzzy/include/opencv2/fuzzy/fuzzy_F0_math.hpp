@@ -96,6 +96,7 @@ namespace ft
     */
     CV_EXPORTS_W int FT02D_iteration(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask, OutputArray maskOutput, bool firstStop);
 	CV_EXPORTS_W int FT02D_iterationEx(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask, OutputArray maskOutput, InputArray validPixels);
+    CV_EXPORTS_W int FT02D_iterationAdvanced(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask, OutputArray maskOutput);
 
     /** @brief Sligtly less accurate version of \f$F^0\f$-transfrom computation optimized for higher speed. The methods counts with linear basic function.
     @param matrix Input 3 channels matrix.
@@ -114,6 +115,9 @@ namespace ft
     This function computes F-transfrom and inverse F-transfotm using linear basic function in one step. It is ~9 times faster then `ft::FT02D_process` method and more accurate than `ft::FT02D_FL_process` method.
     */
     CV_EXPORTS_W void FT02D_FL_process_float(InputArray matrix, const int radius, OutputArray output);
+	
+	CV_EXPORTS_W void FT02D_singleComponent(InputArray matrix, InputArray kernel, const int x, const int y, OutputArray component, InputArray mask = noArray());
+
 
     //! @}
 }

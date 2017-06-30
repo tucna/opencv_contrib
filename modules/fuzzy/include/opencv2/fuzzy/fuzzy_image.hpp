@@ -93,6 +93,7 @@ namespace ft
     */
     CV_EXPORTS_W void inpaint(InputArray image, InputArray mask, OutputArray output, int radius, int function, int algorithm);
 	CV_EXPORTS_W void inpaintEx(InputArray image, InputArray mask, InputArray validPixels, OutputArray output, int function, int radius, int algorithm);
+    CV_EXPORTS_W void inpaintAdvanced(InputArray image, InputArray mask, OutputArray output, int function, int radius, int algorithm);
 
     /** @brief Image filtering
     @param image Input image.
