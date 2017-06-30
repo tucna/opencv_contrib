@@ -95,6 +95,7 @@ namespace ft
     This function computes iteration of F-transfrom and inverse F-transfotm and handle image and mask change. The function is used in `ft::inpaint` function.
     */
     CV_EXPORTS_W int FT02D_iteration(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask, OutputArray maskOutput, bool firstStop);
+	CV_EXPORTS_W int FT02D_iterationEx(InputArray matrix, InputArray kernel, OutputArray output, InputArray mask, OutputArray maskOutput, InputArray validPixels);
 
     /** @brief Sligtly less accurate version of \f$F^0\f$-transfrom computation optimized for higher speed. The methods counts with linear basic function.
     @param matrix Input 3 channels matrix.
