@@ -193,10 +193,10 @@ public:
 loadClassifierNM1, e.g. from file in samples/cpp/trained_classifierNM1.xml
 @param  thresholdDelta :   Threshold step in subsequent thresholds when extracting the component tree
 @param  minArea :   The minimum area (% of image size) allowed for retreived ER's
-@param  minArea :   The maximum area (% of image size) allowed for retreived ER's
+@param  maxArea :   The maximum area (% of image size) allowed for retreived ER's
 @param  minProbability :   The minimum probability P(er|character) allowed for retreived ER's
 @param  nonMaxSuppression :   Whenever non-maximum suppression is done over the branch probabilities
-@param  minProbability :   The minimum probability difference between local maxima and local minima ERs
+@param  minProbabilityDiff :   The minimum probability difference between local maxima and local minima ERs
 
 The component tree of the image is extracted by a threshold increased step by step from 0 to 255,
 incrementally computable descriptors (aspect_ratio, compactness, number of holes, and number of
@@ -227,6 +227,24 @@ features: hole area ratio, convex hull ratio, and number of outer inflexion poin
 CV_EXPORTS_W Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb,
                                                   float minProbability = (float)0.3);
 
+/** @brief Reads an Extremal Region Filter for the 1st stage classifier of N&M algorithm
+    from the provided path e.g. /path/to/cpp/trained_classifierNM1.xml
+
+@overload
+ */
+CV_EXPORTS_W  Ptr<ERFilter> createERFilterNM1(const String& filename,
+                                                  int thresholdDelta = 1, float minArea = (float)0.00025,
+                                                  float maxArea = (float)0.13, float minProbability = (float)0.4,
+                                                  bool nonMaxSuppression = true,
+                                                  float minProbabilityDiff = (float)0.1);
+
+/** @brief Reads an Extremal Region Filter for the 2nd stage classifier of N&M algorithm
+    from the provided path e.g. /path/to/cpp/trained_classifierNM2.xml
+
+@overload
+ */
+CV_EXPORTS_W Ptr<ERFilter> createERFilterNM2(const String& filename,
+                                                  float minProbability = (float)0.3);
 
 /** @brief Allow to implicitly load the default classifier when creating an ERFilter object.
 
@@ -352,6 +370,24 @@ CV_EXPORTS void MSERsToERStats(InputArray image, std::vector<std::vector<Point> 
 
 // Utility funtion for scripting
 CV_EXPORTS_W void detectRegions(InputArray image, const Ptr<ERFilter>& er_filter1, const Ptr<ERFilter>& er_filter2, CV_OUT std::vector< std::vector<Point> >& regions);
+
+
+/** @brief Extracts text regions from image.
+
+@param image Source image where text blocks needs to be extracted from.  Should be CV_8UC3 (color).
+@param er_filter1 Extremal Region Filter for the 1st stage classifier of N&M algorithm [Neumann12]
+@param er_filter2 Extremal Region Filter for the 2nd stage classifier of N&M algorithm [Neumann12]
+@param groups_rects Output list of rectangle blocks with text
+@param method Grouping method (see text::erGrouping_Modes). Can be one of ERGROUPING_ORIENTATION_HORIZ, ERGROUPING_ORIENTATION_ANY.
+@param filename The XML or YAML file with the classifier model (e.g. samples/trained_classifier_erGrouping.xml). Only to use when grouping method is ERGROUPING_ORIENTATION_ANY.
+@param minProbability The minimum probability for accepting a group. Only to use when grouping method is ERGROUPING_ORIENTATION_ANY.
+
+
+ */
+CV_EXPORTS_W void detectRegions(InputArray image, const Ptr<ERFilter>& er_filter1, const Ptr<ERFilter>& er_filter2, CV_OUT std::vector<Rect> &groups_rects,
+                                           int method = ERGROUPING_ORIENTATION_HORIZ,
+                                           const String& filename = String(),
+                                           float minProbability = (float)0.5);
 
 //! @}
 

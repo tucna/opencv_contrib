@@ -279,9 +279,9 @@ void ERFilterNM::er_tree_extract( InputArray image )
 
     // the quads for euler number calculation
     // quads[2][2] and quads[2][3] are never used.
-    // The four lowest bits in each quads[i][j] correspond to the 2x2 binary patterns 
-    // Q_1, Q_2, Q_3 in the Neumann and Matas CVPR 2012 paper 
-    // (see in page 4 at the end of first column). 
+    // The four lowest bits in each quads[i][j] correspond to the 2x2 binary patterns
+    // Q_1, Q_2, Q_3 in the Neumann and Matas CVPR 2012 paper
+    // (see in page 4 at the end of first column).
     // Q_1 and Q_2 have four patterns, while Q_3 has only two.
     const int quads[3][4] =
     {
@@ -1143,6 +1143,17 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
 
     filter->setMinProbability(minProbability);
     return (Ptr<ERFilter>)filter;
+}
+
+Ptr<ERFilter> createERFilterNM1(const String& filename, int _thresholdDelta,
+                                float _minArea, float _maxArea, float _minProbability,
+                                bool _nonMaxSuppression, float _minProbabilityDiff) {
+    return createERFilterNM1(loadClassifierNM1(filename), _thresholdDelta, _minArea, _maxArea, _minProbability, _nonMaxSuppression, _minProbabilityDiff);
+
+}
+
+Ptr<ERFilter> createERFilterNM2(const String& filename, float _minProbability) {
+    return createERFilterNM2(loadClassifierNM2(filename), _minProbability);
 }
 
 /*!
@@ -4206,6 +4217,42 @@ void detectRegions(InputArray image, const Ptr<ERFilter>& er_filter1, const Ptr<
 
       regions.push_back(contours[0]);
     }
+}
+
+
+void detectRegions(InputArray image, const Ptr<ERFilter>& er_filter1, const Ptr<ERFilter>& er_filter2,
+                                           CV_OUT std::vector<Rect> &groups_rects,
+                                           int method,
+                                           const String& filename,
+                                           float minProbability)
+{
+    // assert correct image type
+    CV_Assert( image.type() == CV_8UC3 );
+
+    CV_Assert( !er_filter1.empty() );
+    CV_Assert( !er_filter2.empty() );
+
+    // Extract channels to be processed individually
+    vector<Mat> channels;
+
+    Mat grey;
+    cvtColor(image,grey,COLOR_RGB2GRAY);
+
+    // here we are only using grey channel
+    channels.push_back(grey);
+    channels.push_back(255-grey);
+
+    vector<vector<ERStat> > regions(channels.size());
+
+    // Apply the default cascade classifier to each independent channel (could be done in parallel)
+    for (int c=0; c<(int)channels.size(); c++)
+    {
+        er_filter1->run(channels[c], regions[c]);
+        er_filter2->run(channels[c], regions[c]);
+    }
+   // Detect character groups
+    vector< vector<Vec2i> > nm_region_groups;
+    erGrouping(image, channels, regions, nm_region_groups, groups_rects, method, filename, minProbability);
 }
 
 }
