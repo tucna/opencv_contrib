@@ -613,7 +613,11 @@ int ft::FT02D_iterationEx(InputArray matrix, InputArray kernel, OutputArray outp
 
 			if (denominator[0] == 0)
 			{
-				continue;
+                undefinedComponents++; //THIS
+                Mat roiMaskOutput(maskOutputMat, Rect(centerX - radiusX + 1, centerY - radiusY + 1, kernel.cols() - 2, kernel.rows() - 2)); //THIS
+                roiMaskOutput.setTo(0); //THIS
+
+                continue;
 			}
 
 			Mat numerator;
