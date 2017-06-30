@@ -165,3 +165,37 @@ void ft::filter(InputArray image, InputArray kernel, OutputArray output)
 
     ft::FT02D_process(image, kernel, output, mask);
 }
+
+void ft::inpaintEx(InputArray image, InputArray mask, InputArray validPixels, OutputArray output, int function, int radius, int algorithm)
+{
+	if (algorithm == ft::ITERATIVE)
+	{
+		Mat kernel;
+		Mat processingOutput;
+		Mat maskOutput;
+		int state = 0;
+		int currentRadius = radius;
+
+		Mat processingInput;
+		image.getMat().convertTo(processingInput, CV_32F);
+
+		Mat processingMask;
+		mask.copyTo(processingMask);
+
+		do
+		{
+			ft::createKernel(function, currentRadius, kernel, image.channels());
+
+			Mat invMask = 1 - processingMask;
+
+			state = FT02D_iterationEx(processingInput, kernel, processingOutput, processingMask, maskOutput, validPixels);
+
+			maskOutput.copyTo(processingMask);
+			processingOutput.copyTo(processingInput, invMask);
+
+			currentRadius++;
+		} while (state != 0 /*false*/);
+
+		processingInput.copyTo(output);
+	}
+}
