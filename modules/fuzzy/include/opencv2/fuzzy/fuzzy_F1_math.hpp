@@ -118,9 +118,9 @@ namespace ft
     CV_EXPORTS_W void FT12D_inverseFT(InputArray components, InputArray kernel, OutputArray output, int width, int height);
 
     // Temporary - have to be improved!
-    CV_EXPORTS void FT12D_inverseIrina(const Mat &c01, const Mat &c10, const Mat &kernel, Mat &S10, Mat &S01, Mat &iFT, int width, int height);
-    CV_EXPORTS void DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int radius);
-    CV_EXPORTS void patchInpaint(Mat &image, Mat &mask, cv::Mat &output, int patchWidth, int radius);
+    CV_EXPORTS_W void FT12D_inverseIrina(const Mat &c01, const Mat &c10, const Mat &kernel, Mat &S10, Mat &S01, Mat &iFT, int width, int height);
+    CV_EXPORTS_W void DUMMY_ft1_inpaint(const cv::Mat &image, const cv::Mat &mask, cv::Mat &output, int radius);
+    CV_EXPORTS_W void patchInpaint(Mat &image, Mat &mask, cv::Mat &output, int patchWidth, int radius);
 
     //! @}
 }
