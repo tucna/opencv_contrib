@@ -114,6 +114,8 @@ namespace ft
     */
     CV_EXPORTS_W void FT02D_FL_process_float(InputArray matrix, const int radius, OutputArray output);
 
+    CV_EXPORTS_W void FT02D_lattice_up(InputArray matrix, InputArray kernel, OutputArray output);
+    CV_EXPORTS_W void FT02D_lattice_down(InputArray matrix, InputArray kernel, OutputArray output);
     //! @}
 }
 }

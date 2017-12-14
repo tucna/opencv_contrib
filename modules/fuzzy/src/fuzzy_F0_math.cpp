@@ -299,6 +299,98 @@ void ft::FT02D_FL_process_float(InputArray matrix, const int radius, OutputArray
     merge(oComp, output);
 }
 
+void ft::FT02D_lattice_up(InputArray matrix, InputArray kernel, OutputArray output)
+{
+    CV_Assert(matrix.channels() == kernel.channels());
+
+    Mat inputMask = Mat::ones(matrix.size(), CV_8U);
+
+    int radiusX = (kernel.cols() - 1) / 2;
+    int radiusY = (kernel.rows() - 1) / 2;
+
+    Mat matrixPadded;
+    Mat maskPadded;
+
+    copyMakeBorder(matrix, matrixPadded, radiusY, kernel.rows(), radiusX, kernel.cols(), BORDER_CONSTANT, Scalar(0));
+    copyMakeBorder(inputMask, maskPadded, radiusY, kernel.rows(), radiusX, kernel.cols(), BORDER_CONSTANT, Scalar(0));
+
+    output.create(matrix.size(), CV_8U);
+    Mat outputMat = output.getMat();
+
+    Mat zero_roi = Mat::zeros(kernel.size(), CV_8U);
+
+    for (int i = 0; i < matrix.cols(); i++)
+    {
+        for (int o = 0; o < matrix.rows(); o++)
+        {
+            int centerX = i + radiusX;
+            int centerY = o + radiusY;
+            Rect area(centerX - radiusX, centerY - radiusY, kernel.cols(), kernel.rows());
+
+            Mat roiImage(matrixPadded, area);
+            Mat roiMask(maskPadded, area);
+            Mat kernelMasked;
+
+            kernel.copyTo(kernelMasked, roiMask);
+
+            Mat values;
+            bitwise_or(roiImage + kernelMasked - 1, zero_roi, values);
+
+            double min, max;
+            minMaxLoc(values, &min, &max);
+
+            outputMat.row(o).col(i).setTo(min);
+        }
+    }
+}
+
+void ft::FT02D_lattice_down(InputArray matrix, InputArray kernel, OutputArray output)
+{
+    CV_Assert(matrix.channels() == kernel.channels());
+
+    Mat inputMask = Mat::ones(matrix.size(), CV_8U);
+
+    int radiusX = (kernel.cols() - 1) / 2;
+    int radiusY = (kernel.rows() - 1) / 2;
+    int An = matrix.cols() / radiusX + 1;
+    int Bn = matrix.rows() / radiusY + 1;
+
+    Mat matrixPadded;
+    Mat maskPadded;
+
+    copyMakeBorder(matrix, matrixPadded, radiusY, kernel.rows(), radiusX, kernel.cols(), BORDER_CONSTANT, Scalar(0));
+    copyMakeBorder(inputMask, maskPadded, radiusY, kernel.rows(), radiusX, kernel.cols(), BORDER_CONSTANT, Scalar(1));
+
+    output.create(matrix.size(), CV_8U);
+    Mat outputMat = output.getMat();
+
+    Mat one_roi = Mat::ones(kernel.size(), CV_8U);
+
+    for (int i = 0; i < matrix.cols(); i++)
+    {
+        for (int o = 0; o < matrix.rows(); o++)
+        {
+            int centerX = i + radiusX;
+            int centerY = o + radiusY;
+            Rect area(centerX - radiusX, centerY - radiusY, kernel.cols(), kernel.rows());
+
+            Mat roiImage(matrixPadded, area);
+            Mat roiMask(maskPadded, area);
+            Mat kernelMasked;
+
+            kernel.copyTo(kernelMasked, roiMask);
+
+            Mat value;
+            bitwise_and(1 - kernelMasked + roiImage, one_roi, value);
+
+            double min, max;
+            minMaxLoc(value, &min, &max);
+
+            outputMat.row(o).col(i).setTo(max);
+        }
+    }
+}
+
 void ft::FT02D_components(InputArray matrix, InputArray kernel, OutputArray components, InputArray mask)
 {
     CV_Assert(matrix.channels() == kernel.channels());
