@@ -1,9 +1,10 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 #include <set>
 
-using namespace std;
-using namespace cv;
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 static string getDataDir() { return TS::ptr()->get_data_path(); }
 
@@ -91,7 +92,7 @@ template<typename T>
 static double evaluateBGSAlgorithm(Ptr<T> bgs) {
     Mat background = imread(getDataDir() + "shared/fruits.png");
     Mat object = imread(getDataDir() + "shared/baboon.png");
-    cv::resize(object, object, Size(100, 100));
+    cv::resize(object, object, Size(100, 100), 0, 0, INTER_LINEAR_EXACT);
     Ptr<bgsegm::SyntheticSequenceGenerator> generator = bgsegm::createSyntheticSequenceGenerator(background, object);
 
     double f1_mean = 0;
@@ -135,3 +136,5 @@ TEST(BackgroundSubtractor_LSBP, Accuracy)
     EXPECT_GE(evaluateBGSAlgorithm(bgsegm::createBackgroundSubtractorGSOC()), 0.9);
     EXPECT_GE(evaluateBGSAlgorithm(bgsegm::createBackgroundSubtractorLSBP()), 0.25);
 }
+
+}} // namespace

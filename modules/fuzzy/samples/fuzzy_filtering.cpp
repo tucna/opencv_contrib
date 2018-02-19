@@ -1,16 +1,17 @@
 /* Sample - Filtering
  * Target is to apply filtering using F-transform
- * on the image "input.png". Two different radiuses
- * are used, where bigger one (100 in this case)
+ * on the image "input.png". Two different kernels
+ * are used, where bigger radius (100 in this case)
  * means higher level of blurriness.
  *
  * Image "output1_filter.png" is created from "input.png"
- * using radius 3.
+ * using "kernel1" with radius 3.
  *
  * Image "output2_filter.png" is created from "input.png"
- * using radius 100.
+ * using "kernel2" with radius 100.
  *
- * Both examples use linear basic function (parametr ft:LINEAR).
+ * Both kernels are created from linear function, using
+ * linear interpolation (parameter ft:LINEAR).
  */
 
 #include "opencv2/core.hpp"
@@ -25,11 +26,17 @@ int main(void)
     // Input image
     Mat I = imread("input.png");
 
+    // Kernel creation
+    Mat kernel1, kernel2;
+
+    ft::createKernel(ft::LINEAR, 3, kernel1, 3);
+    ft::createKernel(ft::LINEAR, 100, kernel2, 3);
+
     // Filtering
     Mat output1, output2;
 
-    ft::filter(I, output1, ft::LINEAR, 3);
-    ft::filter(I, output2, ft::LINEAR, 3);
+    ft::filter(I, kernel1, output1);
+    ft::filter(I, kernel2, output2);
 
     // Save output
 

@@ -41,10 +41,7 @@
 
 #include "test_precomp.hpp"
 
-#include <string>
-
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 TEST(fuzzy_image, inpainting)
 {
@@ -59,19 +56,21 @@ TEST(fuzzy_image, inpainting)
     EXPECT_TRUE(!orig.empty() && !exp1.empty() && !exp2.empty() && !exp3.empty() && !mask1.empty() && !mask2.empty());
 
     Mat res1, res2, res3;
-    ft::inpaint(orig, mask1, res1, ft::LINEAR, 2, ft::ONE_STEP);
-    ft::inpaint(orig, mask2, res2, ft::LINEAR, 2, ft::MULTI_STEP);
-    ft::inpaint(orig, mask2, res3, ft::LINEAR, 2, ft::ITERATIVE);
+    ft::inpaint(orig, mask1, res1, 2, ft::LINEAR, ft::ONE_STEP);
+    ft::inpaint(orig, mask2, res2, 2, ft::LINEAR, ft::MULTI_STEP);
+    ft::inpaint(orig, mask2, res3, 2, ft::LINEAR, ft::ITERATIVE);
 
     res1.convertTo(res1, CV_8UC3);
     res2.convertTo(res2, CV_8UC3);
     res3.convertTo(res3, CV_8UC3);
 
-    float n1 = cvtest::norm(exp1, res1, NORM_INF);
-    float n2 = cvtest::norm(exp2, res2, NORM_INF);
-    float n3 = cvtest::norm(exp3, res3, NORM_INF);
+    double n1 = cvtest::norm(exp1, res1, NORM_INF);
+    double n2 = cvtest::norm(exp2, res2, NORM_INF);
+    double n3 = cvtest::norm(exp3, res3, NORM_INF);
 
-    EXPECT_DOUBLE_EQ(n1 + n2 + n3, 0);
+    EXPECT_LE(n1, 1);
+    EXPECT_LE(n2, 1);
+    EXPECT_LE(n3, 1);
 }
 
 TEST(fuzzy_image, filtering)
@@ -86,17 +85,17 @@ TEST(fuzzy_image, filtering)
     ft::createKernel(ft::LINEAR, 20, kernel, 3);
 
     Mat res4;
-    ft::filter(orig, res4, ft::LINEAR, 20);
+    ft::filter(orig, kernel, res4);
 
     res4.convertTo(res4, CV_8UC3);
 
     double n1 = cvtest::norm(exp4, res4, NORM_INF);
 
-    EXPECT_DOUBLE_EQ(n1, 0);
+    EXPECT_LE(n1, 1);
 }
 
 TEST(fuzzy_image, kernel)
-{    
+{
     Mat kernel1;
     ft::createKernel(ft::LINEAR, 2, kernel1, 1);
 
@@ -106,7 +105,9 @@ TEST(fuzzy_image, kernel)
     Mat kernel2;
     ft::createKernel(vectorA, vectorB, kernel2, 1);
 
-    float diff = cvtest::norm(kernel1, kernel2, NORM_INF);
+    double diff = cvtest::norm(kernel1, kernel2, NORM_INF);
 
-    EXPECT_FLOAT_EQ(diff, 0);
+    EXPECT_DOUBLE_EQ(diff, 0);
 }
+
+}} // namespace
