@@ -107,13 +107,13 @@ static void _setCameraIntrinsics(Camera* cam, InputArray _K, const Size& imsize)
     cam->setFrustumOffset(toOGRE_SS * Vector2(pp_offset.val));
 }
 
-static SceneNode* _getSceneNode(SceneManager* sceneMgr, const String& name)
+static SceneNode& _getSceneNode(SceneManager* sceneMgr, const String& name)
 {
     MovableObject* mo = NULL;
 
     try
     {
-        mo = sceneMgr->getCamera(name);
+        mo = sceneMgr->getMovableObject(name, "Camera");
     }
     catch (ItemIdentityException&)
     {
@@ -123,7 +123,7 @@ static SceneNode* _getSceneNode(SceneManager* sceneMgr, const String& name)
     try
     {
         if (!mo)
-            mo = sceneMgr->getLight(name);
+            mo = sceneMgr->getMovableObject(name, "Light");
     }
     catch (ItemIdentityException&)
     {
@@ -131,27 +131,39 @@ static SceneNode* _getSceneNode(SceneManager* sceneMgr, const String& name)
     }
 
     if (!mo)
-        mo = sceneMgr->getEntity(name);
+        mo = sceneMgr->getMovableObject(name, "Entity"); // throws if not found
 
-    return mo->getParentSceneNode();
+    return *mo->getParentSceneNode();
 }
 
-struct Application : public OgreBites::ApplicationContext
+struct Application : public OgreBites::ApplicationContext, public OgreBites::InputListener
 {
+    Ptr<LogManager> logMgr;
     Ogre::SceneManager* sceneMgr;
     Ogre::String title;
     uint32_t w;
     uint32_t h;
+    int key_pressed;
+    int flags;
 
-    Application(const Ogre::String& _title, const Size& sz)
+    Application(const Ogre::String& _title, const Size& sz, int _flags)
         : OgreBites::ApplicationContext("ovis", false), sceneMgr(NULL), title(_title), w(sz.width),
-          h(sz.height)
+          h(sz.height), key_pressed(-1), flags(_flags)
     {
+        logMgr.reset(new LogManager());
+        logMgr->createLog("ovis.log", true, true, true);
+        logMgr->setLogDetail(LL_LOW);
     }
 
     void setupInput(bool /*grab*/)
     {
         // empty impl to show cursor
+    }
+
+    bool keyPressed(const OgreBites::KeyboardEvent& evt)
+    {
+        key_pressed = evt.keysym.sym;
+        return true;
     }
 
     bool oneTimeConfig()
@@ -172,10 +184,17 @@ struct Application : public OgreBites::ApplicationContext
             _h = h;
             _name = title;
         }
-        miscParams["FSAA"] = "4";
+
+        if (flags & SCENE_AA)
+            miscParams["FSAA"] = "4";
+
         miscParams["vsync"] = "true";
 
-        return OgreBites::ApplicationContext::createWindow(_name, _w, _h, miscParams);
+        OgreBites::NativeWindowPair ret =
+            OgreBites::ApplicationContext::createWindow(_name, _w, _h, miscParams);
+        addInputListener(ret.native, this); // handle input for all windows
+
+        return ret;
     }
 
     void locateResources()
@@ -208,7 +227,7 @@ struct Application : public OgreBites::ApplicationContext
     }
 };
 
-class WindowSceneImpl : public WindowScene, public OgreBites::InputListener
+class WindowSceneImpl : public WindowScene
 {
     String title;
     Root* root;
@@ -217,6 +236,8 @@ class WindowSceneImpl : public WindowScene, public OgreBites::InputListener
     RenderWindow* rWin;
     Ptr<OgreBites::CameraMan> camman;
     Ptr<Rectangle2D> bgplane;
+
+    Ogre::RenderTarget* frameSrc;
 
 public:
     WindowSceneImpl(Ptr<Application> app, const String& _title, const Size& sz, int flags)
@@ -262,8 +283,6 @@ public:
         {
             app->sceneMgr = sceneMgr;
             rWin = app->getRenderWindow();
-            app->addInputListener(this);
-
             if (camman)
                 app->addInputListener(camman.get());
         }
@@ -273,11 +292,21 @@ public:
             rWin = nwin.render;
             if (camman)
                 app->addInputListener(nwin.native, camman.get());
-
-            app->addInputListener(nwin.native, this);
         }
 
         rWin->addViewport(cam);
+        frameSrc = rWin;
+
+        if (flags & SCENE_RENDER_FLOAT)
+        {
+            // also render into an offscreen texture
+            // currently this draws everything twice, but we spare the float->byte conversion for display
+            TexturePtr tex = TextureManager::getSingleton().createManual(
+                title + "_rt", RESOURCEGROUP_NAME, TEX_TYPE_2D, sz.width, sz.height, 0, PF_FLOAT32_RGBA,
+                TU_RENDERTARGET);
+            frameSrc = tex->getBuffer()->getRenderTarget();
+            frameSrc->addViewport(cam);
+        }
     }
 
     void setBackground(InputArray image)
@@ -294,6 +323,21 @@ public:
 
         Pass* rpass = bgplane->getMaterial()->getBestTechnique()->getPasses()[0];
         rpass->getTextureUnitStates()[0]->setTextureName(name);
+
+        // ensure bgplane is visible
+        bgplane->setVisible(true);
+    }
+
+    void setBackground(const Scalar& color)
+    {
+        // hide background plane
+        bgplane->setVisible(false);
+
+        // BGRA as uchar
+        ColourValue _color = ColourValue(color[2], color[1], color[0], color[3]) / 255;
+        rWin->getViewport(0)->setBackgroundColour(_color);
+        if(frameSrc != rWin)
+            frameSrc->getViewport(0)->setBackgroundColour(_color);
     }
 
     void createEntity(const String& name, const String& meshname, InputArray tvec, InputArray rot)
@@ -305,6 +349,13 @@ public:
         _convertRT(rot, tvec, q, t);
         SceneNode* node = sceneMgr->getRootSceneNode()->createChildSceneNode(t, q);
         node->attachObject(ent);
+    }
+
+    void removeEntity(const String& name) {
+        SceneNode& node = _getSceneNode(sceneMgr, name);
+        node.getAttachedObject(name)->detachFromParent();
+        sceneMgr->destroyEntity(name);
+        sceneMgr->destroySceneNode(&node);
     }
 
     Rect2d createCameraEntity(const String& name, InputArray K, const Size& imsize, float zFar,
@@ -356,22 +407,22 @@ public:
 
     void updateEntityPose(const String& name, InputArray tvec, InputArray rot)
     {
-        SceneNode* node = _getSceneNode(sceneMgr, name);
+        SceneNode& node = _getSceneNode(sceneMgr, name);
         Quaternion q;
         Vector3 t;
         _convertRT(rot, tvec, q, t);
-        node->rotate(q, Ogre::Node::TS_LOCAL);
-        node->translate(t, Ogre::Node::TS_LOCAL);
+        node.rotate(q, Ogre::Node::TS_LOCAL);
+        node.translate(t, Ogre::Node::TS_LOCAL);
     }
 
     void setEntityPose(const String& name, InputArray tvec, InputArray rot, bool invert)
     {
-        SceneNode* node = _getSceneNode(sceneMgr, name);
+        SceneNode& node = _getSceneNode(sceneMgr, name);
         Quaternion q;
         Vector3 t;
         _convertRT(rot, tvec, q, t, invert);
-        node->setOrientation(q);
-        node->setPosition(t);
+        node.setOrientation(q);
+        node.setPosition(t);
     }
 
     void _createBackground()
@@ -404,19 +455,17 @@ public:
 
     void getScreenshot(OutputArray frame)
     {
-        frame.create(rWin->getHeight(), rWin->getWidth(), CV_8UC3);
+        PixelFormat src_type = frameSrc->suggestPixelFormat();
+        int dst_type = src_type == PF_BYTE_RGB ? CV_8UC3 : CV_32FC4;
+
+        frame.create(frameSrc->getHeight(), frameSrc->getWidth(), dst_type);
 
         Mat out = frame.getMat();
-        PixelBox pb(rWin->getWidth(), rWin->getHeight(), 1, PF_BYTE_BGR, out.ptr());
-        rWin->copyContentsToMemory(pb, pb);
-    }
+        PixelBox pb(frameSrc->getWidth(), frameSrc->getHeight(), 1, src_type, out.ptr());
+        frameSrc->copyContentsToMemory(pb, pb);
 
-    bool keyPressed(const OgreBites::KeyboardEvent& evt)
-    {
-        if (evt.keysym.sym == SDLK_ESCAPE)
-            root->queueEndRendering();
-
-        return true;
+        // convert to OpenCV channel order
+        cvtColor(out, out, dst_type == CV_8UC3 ? COLOR_RGB2BGR : COLOR_RGBA2BGRA);
     }
 
     void fixCameraYawAxis(bool useFixed, InputArray _up)
@@ -510,19 +559,25 @@ Ptr<WindowScene> createWindow(const String& title, const Size& size, int flags)
 {
     if (!_app)
     {
-        _app = makePtr<Application>(title.c_str(), size);
+        _app = makePtr<Application>(title.c_str(), size, flags);
         _app->initApp();
     }
 
     return makePtr<WindowSceneImpl>(_app, title, size, flags);
 }
 
-CV_EXPORTS_W bool renderOneFrame()
+CV_EXPORTS_W int waitKey(int delay)
 {
     CV_Assert(_app);
 
+    _app->key_pressed = -1;
     _app->getRoot()->renderOneFrame();
-    return not _app->getRoot()->endRenderingQueued();
+
+    // wait for keypress, using vsync instead of sleep
+    while(!delay && _app->key_pressed == -1)
+        _app->getRoot()->renderOneFrame();
+
+    return (_app->key_pressed != -1) ? (_app->key_pressed & 0xff) : -1;
 }
 
 void setMaterialProperty(const String& name, int prop, const Scalar& val)
@@ -575,6 +630,61 @@ void setMaterialProperty(const String& name, int prop, const String& value)
     }
 
     rpass->getTextureUnitStates()[0]->setTextureName(value);
+}
+
+static bool setShaderProperty(const GpuProgramParametersSharedPtr& params, const String& prop,
+                              const Scalar& value)
+{
+    const GpuConstantDefinition* def = params->_findNamedConstantDefinition(prop, false);
+
+    if(!def)
+        return false;
+
+    Vec4f valf = value;
+
+    switch(def->constType)
+    {
+    case GCT_FLOAT1:
+        params->setNamedConstant(prop, valf[0]);
+        return true;
+    case GCT_FLOAT2:
+        params->setNamedConstant(prop, Vector2(valf.val));
+        return true;
+    case GCT_FLOAT3:
+        params->setNamedConstant(prop, Vector3(valf.val));
+        return true;
+    case GCT_FLOAT4:
+        params->setNamedConstant(prop, Vector4(valf.val));
+        return true;
+    default:
+        CV_Error(Error::StsBadArg, "currently only float[1-4] uniforms are supported");
+        return false;
+    }
+}
+
+void setMaterialProperty(const String& name, const String& prop, const Scalar& value)
+{
+    CV_Assert(_app);
+
+    MaterialPtr mat = MaterialManager::getSingleton().getByName(name, RESOURCEGROUP_NAME);
+    CV_Assert(mat);
+
+    Pass* rpass = mat->getTechniques()[0]->getPasses()[0];
+    bool set = false;
+    if(rpass->hasGpuProgram(GPT_VERTEX_PROGRAM))
+    {
+        GpuProgramParametersSharedPtr params = rpass->getVertexProgramParameters();
+        set = setShaderProperty(params, prop, value);
+    }
+
+    if(rpass->hasGpuProgram(GPT_FRAGMENT_PROGRAM))
+    {
+        GpuProgramParametersSharedPtr params = rpass->getFragmentProgramParameters();
+        set = set || setShaderProperty(params, prop, value);
+    }
+
+    if(!set)
+        CV_Error_(Error::StsBadArg, ("shader parameter named '%s' not found", prop.c_str()));
 }
 }
 }
