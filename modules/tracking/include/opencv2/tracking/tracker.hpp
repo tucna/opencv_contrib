@@ -527,9 +527,9 @@ class CV_EXPORTS_W Tracker : public virtual Algorithm
 
   virtual ~Tracker();
 
-  /** @brief Initialize the tracker with a know bounding box that surrounding the target
+  /** @brief Initialize the tracker with a known bounding box that surrounded the target
     @param image The initial frame
-    @param boundingBox The initial boundig box
+    @param boundingBox The initial bounding box
 
     @return True if initialization went succesfully, false otherwise
      */
@@ -537,7 +537,7 @@ class CV_EXPORTS_W Tracker : public virtual Algorithm
 
   /** @brief Update the tracker, find the new most likely bounding box for the target
     @param image The current frame
-    @param boundingBox The boundig box that represent the new target location, if true was returned, not
+    @param boundingBox The bounding box that represent the new target location, if true was returned, not
     modified otherwise
 
     @return True means that target was located and false means that tracker cannot locate target in
@@ -1108,12 +1108,12 @@ class CV_EXPORTS_W TrackerBoosting : public Tracker
     int iterationInit;  //!<the initial iterations
     int featureSetNumFeatures;  //!< # features
     /**
-     * \brief Read parameters from file
+     * \brief Read parameters from a file
      */
     void read( const FileNode& fn );
 
     /**
-     * \brief Write parameters in a file
+     * \brief Write parameters to a file
      */
     void write( FileStorage& fs ) const;
   };
@@ -1171,7 +1171,7 @@ class CV_EXPORTS_W TrackerMedianFlow : public Tracker
 tracking, learning and detection.
 
 The tracker follows the object from frame to frame. The detector localizes all appearances that
-have been observed so far and corrects the tracker if necessary. The learning estimates detector’s
+have been observed so far and corrects the tracker if necessary. The learning estimates detector's
 errors and updates it to avoid these errors in the future. The implementation is based on @cite TLD .
 
 The Median Flow algorithm (see cv::TrackerMedianFlow) was chosen as a tracking component in this
@@ -1199,8 +1199,8 @@ class CV_EXPORTS_W TrackerTLD : public Tracker
 };
 
 /** @brief KCF is a novel tracking framework that utilizes properties of circulant matrix to enhance the processing speed.
- * This tracking method is an implementation of @cite KCF_ECCV which is extended to KFC with color-names features (@cite KCF_CN).
- * The original paper of KCF is available at <http://home.isr.uc.pt/~henriques/circulant/index.html>
+ * This tracking method is an implementation of @cite KCF_ECCV which is extended to KCF with color-names features (@cite KCF_CN).
+ * The original paper of KCF is available at <http://www.robots.ox.ac.uk/~joao/publications/henriques_tpami2015.pdf>
  * as well as the matlab implementation. For more information about KCF with color-names features, please refer to
  * <http://www.cvl.isy.liu.se/research/objrec/visualtracking/colvistrack/index.html>.
  */
@@ -1227,21 +1227,21 @@ public:
     Params();
 
     /**
-    * \brief Read parameters from file, currently unused
+    * \brief Read parameters from a file
     */
     void read(const FileNode& /*fn*/);
 
     /**
-    * \brief Read parameters from file, currently unused
+    * \brief Write parameters to a file
     */
     void write(FileStorage& /*fs*/) const;
 
-    double detect_thresh;         //!<  detection confidence threshold
-    double sigma;                 //!<  gaussian kernel bandwidth
-    double lambda;                //!<  regularization
-    double interp_factor;         //!<  linear interpolation factor for adaptation
-    double output_sigma_factor;   //!<  spatial bandwidth (proportional to target)
-    double pca_learning_rate;     //!<  compression learning rate
+    float detect_thresh;         //!<  detection confidence threshold
+    float sigma;                 //!<  gaussian kernel bandwidth
+    float lambda;                //!<  regularization
+    float interp_factor;         //!<  linear interpolation factor for adaptation
+    float output_sigma_factor;   //!<  spatial bandwidth (proportional to target)
+    float pca_learning_rate;     //!<  compression learning rate
     bool resize;                  //!<  activate the resize feature to improve the processing speed
     bool split_coeff;             //!<  split the training coefficients into two matrices
     bool wrap_kernel;             //!<  wrap around the kernel values
@@ -1296,6 +1296,22 @@ public:
 
   virtual ~TrackerGOTURN() {}
 };
+
+/** @brief the MOSSE tracker
+note, that this tracker works with grayscale images, if passed bgr ones, they will get converted internally.
+@cite MOSSE Visual Object Tracking using Adaptive Correlation Filters
+*/
+
+class CV_EXPORTS_W TrackerMOSSE : public Tracker
+{
+ public:
+  /** @brief Constructor
+  */
+  CV_WRAP static Ptr<TrackerMOSSE> create();
+
+  virtual ~TrackerMOSSE() {}
+};
+
 
 /************************************ MultiTracker Class ---By Laksono Kurnianggoro---) ************************************/
 /** @brief This class is used to track multiple objects using the specified tracker algorithm.
@@ -1381,9 +1397,9 @@ public:
     targetNum = 0;
   }
 
-  /** @brief Add a new target to a tracking-list and initialize the tracker with a know bounding box that surrounding the target
+  /** @brief Add a new target to a tracking-list and initialize the tracker with a known bounding box that surrounded the target
   @param image The initial frame
-  @param boundingBox The initial boundig box of target
+  @param boundingBox The initial bounding box of target
   @param tracker_algorithm Multi-tracker algorithm
 
   @return True if new target initialization went succesfully, false otherwise
@@ -1419,7 +1435,7 @@ public:
 the long-term tracking task into tracking, learning and detection.
 
 The tracker follows the object from frame to frame. The detector localizes all appearances that
-have been observed so far and corrects the tracker if necessary. The learning estimates detector’s
+have been observed so far and corrects the tracker if necessary. The learning estimates detector's
 errors and updates it to avoid these errors in the future. The implementation is based on @cite TLD .
 
 The Median Flow algorithm (see cv::TrackerMedianFlow) was chosen as a tracking component in this
