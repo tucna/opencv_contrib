@@ -7,6 +7,7 @@
 #include <OgreApplicationContext.h>
 #include <OgreCameraMan.h>
 #include <OgreRectangle2D.h>
+#include <OgreCompositorManager.h>
 
 #include <opencv2/calib3d.hpp>
 
@@ -23,19 +24,35 @@ static const char* RENDERSYSTEM_NAME = "OpenGL 3+ Rendering Subsystem";
 static std::vector<String> _extraResourceLocations;
 
 // convert from OpenCV to Ogre coordinates:
-// rotation by 180° around x axis
-static Matrix3 toOGRE = Matrix3(1, 0, 0, 0, -1, 0, 0, 0, -1);
+static Quaternion toOGRE(Degree(180), Vector3::UNIT_X);
 static Vector2 toOGRE_SS = Vector2(1, -1);
 
 WindowScene::~WindowScene() {}
 
 void _createTexture(const String& name, Mat image)
 {
+    PixelFormat format;
+    switch(image.type())
+    {
+    case CV_8UC4:
+        format = PF_BYTE_BGRA;
+        break;
+    case CV_8UC3:
+        format = PF_BYTE_BGR;
+        break;
+    case CV_8UC1:
+        format = PF_BYTE_L;
+        break;
+    default:
+        CV_Error(Error::StsBadArg, "currently only CV_8UC1, CV_8UC3, CV_8UC4 textures are supported");
+        break;
+    }
+
     TextureManager& texMgr = TextureManager::getSingleton();
     TexturePtr tex = texMgr.getByName(name, RESOURCEGROUP_NAME);
 
     Image im;
-    im.loadDynamicImage(image.ptr(), image.cols, image.rows, 1, PF_BYTE_BGR);
+    im.loadDynamicImage(image.ptr(), image.cols, image.rows, 1, format);
 
     if (tex)
     {
@@ -48,11 +65,10 @@ void _createTexture(const String& name, Mat image)
     texMgr.loadImage(name, RESOURCEGROUP_NAME, im);
 }
 
-static void _convertRT(InputArray rot, InputArray tvec, Quaternion& q, Vector3& t,
-                       bool invert = false)
+static void _convertRT(InputArray rot, InputArray tvec, Quaternion& q, Vector3& t, bool invert = false)
 {
-    CV_Assert(rot.empty() || rot.rows() == 3 || rot.size() == Size(3, 3),
-              tvec.empty() || tvec.rows() == 3);
+    CV_Assert_N(rot.empty() || rot.rows() == 3 || rot.size() == Size(3, 3),
+                tvec.empty() || tvec.rows() == 3);
 
     q = Quaternion::IDENTITY;
     t = Vector3::ZERO;
@@ -72,7 +88,7 @@ static void _convertRT(InputArray rot, InputArray tvec, Quaternion& q, Vector3& 
 
         Matrix3 R;
         _R.copyTo(Mat_<Real>(3, 3, R[0]));
-        q = Quaternion(toOGRE * R);
+        q = Quaternion(R);
 
         if (invert)
         {
@@ -83,7 +99,6 @@ static void _convertRT(InputArray rot, InputArray tvec, Quaternion& q, Vector3& 
     if (!tvec.empty())
     {
         tvec.copyTo(Mat_<Real>(3, 1, t.ptr()));
-        t = toOGRE * t;
 
         if(invert)
         {
@@ -100,11 +115,19 @@ static void _setCameraIntrinsics(Camera* cam, InputArray _K, const Size& imsize)
 
     Matx33f K = _K.getMat();
 
+    float zNear = cam->getNearClipDistance();
+    float top = zNear * K(1, 2) / K(1, 1);
+    float left = -zNear * K(0, 2) / K(0, 0);
+    float right = zNear * (imsize.width - K(0, 2)) / K(0, 0);
+    float bottom = -zNear * (imsize.height - K(1, 2)) / K(1, 1);
+
+    // use frustum extents instead of setFrustumOffset as the latter
+    // assumes centered FOV, which is not the case
+    cam->setFrustumExtents(left, right, top, bottom);
+
+    // top and bottom parts of the FOV
     float fovy = atan2(K(1, 2), K(1, 1)) + atan2(imsize.height - K(1, 2), K(1, 1));
     cam->setFOVy(Radian(fovy));
-
-    Vec2f pp_offset = Vec2f(0.5, 0.5) - Vec2f(K(0, 2) / imsize.width, K(1, 2) / imsize.height);
-    cam->setFrustumOffset(toOGRE_SS * Vector2(pp_offset.val));
 }
 
 static SceneNode& _getSceneNode(SceneManager* sceneMgr, const String& name)
@@ -114,6 +137,10 @@ static SceneNode& _getSceneNode(SceneManager* sceneMgr, const String& name)
     try
     {
         mo = sceneMgr->getMovableObject(name, "Camera");
+
+        // with cameras we have an extra CS flip node
+        if(mo)
+            return *mo->getParentSceneNode()->getParentSceneNode();
     }
     catch (ItemIdentityException&)
     {
@@ -238,10 +265,10 @@ class WindowSceneImpl : public WindowScene
     Ptr<Rectangle2D> bgplane;
 
     Ogre::RenderTarget* frameSrc;
-
+    Ogre::RenderTarget* depthRTT;
 public:
     WindowSceneImpl(Ptr<Application> app, const String& _title, const Size& sz, int flags)
-        : title(_title), root(app->getRoot())
+        : title(_title), root(app->getRoot()), depthRTT(NULL)
     {
         if (!app->sceneMgr)
         {
@@ -271,12 +298,14 @@ public:
         cam->setNearClipDistance(0.5);
         cam->setAutoAspectRatio(true);
         camNode = sceneMgr->getRootSceneNode()->createChildSceneNode();
+        camNode->setOrientation(toOGRE);
         camNode->attachObject(cam);
 
         if (flags & SCENE_INTERACTIVE)
         {
             camman.reset(new OgreBites::CameraMan(camNode));
             camman->setStyle(OgreBites::CS_ORBIT);
+            camNode->setFixedYawAxis(true, Vector3::NEGATIVE_UNIT_Y);
         }
 
         if (!app->sceneMgr)
@@ -311,7 +340,7 @@ public:
 
     void setBackground(InputArray image)
     {
-        CV_Assert(image.type() == CV_8UC3, bgplane);
+        CV_Assert(bgplane);
 
         String name = sceneMgr->getName() + "_Background";
 
@@ -326,6 +355,31 @@ public:
 
         // ensure bgplane is visible
         bgplane->setVisible(true);
+    }
+
+    void setCompositors(const std::vector<String>& names)
+    {
+        CompositorManager& cm = CompositorManager::getSingleton();
+        // this should be applied to all owned render targets
+        Ogre::RenderTarget* targets[] = {frameSrc, rWin, depthRTT};
+
+        for(int j = 0; j < 3; j++)
+        {
+            Ogre::RenderTarget* tgt = targets[j];
+            if(!tgt || (frameSrc == rWin && tgt == rWin)) continue;
+
+            Viewport* vp = tgt->getViewport(0);
+            cm.removeCompositorChain(vp); // remove previous configuration
+
+            for(size_t i = 0; i < names.size(); i++)
+            {
+                if (!cm.addCompositor(vp, names[i])) {
+                    LogManager::getSingleton().logError("Failed to add compositor: " + names[i]);
+                    continue;
+                }
+                cm.setCompositorEnabled(vp, names[i], true);
+            }
+        }
     }
 
     void setBackground(const Scalar& color)
@@ -354,7 +408,12 @@ public:
     void removeEntity(const String& name) {
         SceneNode& node = _getSceneNode(sceneMgr, name);
         node.getAttachedObject(name)->detachFromParent();
+
+        // only one of the following will do something
+        sceneMgr->destroyLight(name);
         sceneMgr->destroyEntity(name);
+        sceneMgr->destroyCamera(name);
+
         sceneMgr->destroySceneNode(&node);
     }
 
@@ -379,6 +438,8 @@ public:
         Vector3 t;
         _convertRT(rot, tvec, q, t);
         SceneNode* node = sceneMgr->getRootSceneNode()->createChildSceneNode(t, q);
+        node = node->createChildSceneNode();
+        node->setOrientation(toOGRE); // camera mesh is oriented by OGRE conventions by default
         node->attachObject(cam);
 
         RealRect ext = cam->getFrustumExtents();
@@ -425,6 +486,33 @@ public:
         node.setPosition(t);
     }
 
+    void setEntityProperty(const String& name, int prop, const String& value)
+    {
+        CV_Assert(prop == ENTITY_MATERIAL);
+        SceneNode& node = _getSceneNode(sceneMgr, name);
+
+        MaterialPtr mat = MaterialManager::getSingleton().getByName(value, RESOURCEGROUP_NAME);
+        CV_Assert(mat && "material not found");
+
+        Camera* cam = dynamic_cast<Camera*>(node.getAttachedObject(name));
+        if(cam)
+        {
+            cam->setMaterial(mat);
+            return;
+        }
+
+        Entity* ent = dynamic_cast<Entity*>(node.getAttachedObject(name));
+        CV_Assert(ent && "invalid entity");
+        ent->setMaterial(mat);
+    }
+
+    void setEntityProperty(const String& name, int prop, const Scalar& value)
+    {
+        CV_Assert(prop == ENTITY_SCALE);
+        SceneNode& node = _getSceneNode(sceneMgr, name);
+        node.setScale(value[0], value[1], value[2]);
+    }
+
     void _createBackground()
     {
         String name = "_" + sceneMgr->getName() + "_DefaultBackground";
@@ -468,42 +556,67 @@ public:
         cvtColor(out, out, dst_type == CV_8UC3 ? COLOR_RGB2BGR : COLOR_RGBA2BGRA);
     }
 
+    void getDepth(OutputArray depth)
+    {
+        Camera* cam = sceneMgr->getCamera(title);
+        if (!depthRTT)
+        {
+            // render into an offscreen texture
+            // currently this draws everything twice as OGRE lacks depth texture attachments
+            TexturePtr tex = TextureManager::getSingleton().createManual(
+                title + "_Depth", RESOURCEGROUP_NAME, TEX_TYPE_2D, frameSrc->getWidth(),
+                frameSrc->getHeight(), 0, PF_DEPTH, TU_RENDERTARGET);
+            depthRTT = tex->getBuffer()->getRenderTarget();
+            depthRTT->addViewport(cam);
+            depthRTT->setAutoUpdated(false); // only update when requested
+        }
+
+        Mat tmp(depthRTT->getHeight(), depthRTT->getWidth(), CV_16U);
+        PixelBox pb(depthRTT->getWidth(), depthRTT->getHeight(), 1, PF_DEPTH, tmp.ptr());
+        depthRTT->update(false);
+        depthRTT->copyContentsToMemory(pb, pb);
+
+        // convert to NDC
+        double alpha = 2.0/std::numeric_limits<uint16>::max();
+        tmp.convertTo(depth, CV_64F, alpha, -1);
+
+        // convert to linear
+        float n = cam->getNearClipDistance();
+        float f = cam->getFarClipDistance();
+        Mat ndc = depth.getMat();
+        ndc = -ndc * (f - n) + (f + n);
+        ndc = (2 * f * n) / ndc;
+    }
+
     void fixCameraYawAxis(bool useFixed, InputArray _up)
     {
-        Vector3 up = Vector3::UNIT_Y;
+        Vector3 up = Vector3::NEGATIVE_UNIT_Y;
         if (!_up.empty())
         {
             _up.copyTo(Mat_<Real>(3, 1, up.ptr()));
-            up = toOGRE * up;
         }
 
-        Camera* cam = sceneMgr->getCamera(title);
-        cam->getParentSceneNode()->setFixedYawAxis(useFixed, up);
+        camNode->setFixedYawAxis(useFixed, up);
     }
 
     void setCameraPose(InputArray tvec, InputArray rot, bool invert)
     {
-        Camera* cam = sceneMgr->getCamera(title);
-
-        SceneNode* node = cam->getParentSceneNode();
         Quaternion q;
         Vector3 t;
         _convertRT(rot, tvec, q, t, invert);
 
         if (!rot.empty())
-            node->setOrientation(q);
+            camNode->setOrientation(q*toOGRE);
 
         if (!tvec.empty())
-            node->setPosition(t);
+            camNode->setPosition(t);
     }
 
     void getCameraPose(OutputArray R, OutputArray tvec, bool invert)
     {
-        Camera* cam = sceneMgr->getCamera(title);
-        SceneNode* node = cam->getParentSceneNode();
-
         Matrix3 _R;
-        node->getOrientation().ToRotationMatrix(_R);
+        // toOGRE.Inverse() == toOGRE
+        (camNode->getOrientation()*toOGRE).ToRotationMatrix(_R);
 
         if (invert)
         {
@@ -512,33 +625,33 @@ public:
 
         if (tvec.needed())
         {
-            Vector3 _tvec = node->getPosition();
+            Vector3 _tvec = camNode->getPosition();
 
             if (invert)
             {
                 _tvec = _R * -_tvec;
             }
 
-            _tvec = toOGRE.Transpose() * _tvec;
             Mat_<Real>(3, 1, _tvec.ptr()).copyTo(tvec);
         }
 
         if (R.needed())
         {
-            _R = toOGRE.Transpose() * _R;
             Mat_<Real>(3, 3, _R[0]).copyTo(R);
         }
     }
 
-    void setCameraIntrinsics(InputArray K, const Size& imsize)
+    void setCameraIntrinsics(InputArray K, const Size& imsize, float zNear, float zFar)
     {
         Camera* cam = sceneMgr->getCamera(title);
-        _setCameraIntrinsics(cam, K, imsize);
+
+        if(zNear >= 0) cam->setNearClipDistance(zNear);
+        if(zFar >= 0) cam->setFarClipDistance(zFar);
+        if(!K.empty()) _setCameraIntrinsics(cam, K, imsize);
     }
 
     void setCameraLookAt(const String& target, InputArray offset)
     {
-        SceneNode* cam = sceneMgr->getCamera(title)->getParentSceneNode();
         SceneNode* tgt = sceneMgr->getEntity(target)->getParentSceneNode();
 
         Vector3 _offset = Vector3::ZERO;
@@ -546,10 +659,9 @@ public:
         if (!offset.empty())
         {
             offset.copyTo(Mat_<Real>(3, 1, _offset.ptr()));
-            _offset = toOGRE * _offset;
         }
 
-        cam->lookAt(tgt->_getDerivedPosition() + _offset, Ogre::Node::TS_WORLD);
+        camNode->lookAt(tgt->_getDerivedPosition() + _offset, Ogre::Node::TS_WORLD);
     }
 };
 
@@ -616,20 +728,23 @@ void setMaterialProperty(const String& name, int prop, const Scalar& val)
 
 void setMaterialProperty(const String& name, int prop, const String& value)
 {
-    CV_Assert(prop == MATERIAL_TEXTURE, _app);
+    CV_Assert_N(prop >= MATERIAL_TEXTURE0, prop <= MATERIAL_TEXTURE3, _app);
 
     MaterialPtr mat = MaterialManager::getSingleton().getByName(name, RESOURCEGROUP_NAME);
     CV_Assert(mat);
 
     Pass* rpass = mat->getTechniques()[0]->getPasses()[0];
 
-    if (rpass->getTextureUnitStates().empty())
+    size_t texUnit = prop - MATERIAL_TEXTURE0;
+    CV_Assert(texUnit <= rpass->getTextureUnitStates().size());
+
+    if (rpass->getTextureUnitStates().size() <= texUnit)
     {
         rpass->createTextureUnitState(value);
         return;
     }
 
-    rpass->getTextureUnitStates()[0]->setTextureName(value);
+    rpass->getTextureUnitStates()[texUnit]->setTextureName(value);
 }
 
 static bool setShaderProperty(const GpuProgramParametersSharedPtr& params, const String& prop,
@@ -685,6 +800,14 @@ void setMaterialProperty(const String& name, const String& prop, const Scalar& v
 
     if(!set)
         CV_Error_(Error::StsBadArg, ("shader parameter named '%s' not found", prop.c_str()));
+}
+
+void updateTexture(const String& name, InputArray image)
+{
+    CV_Assert(_app);
+    TexturePtr tex = TextureManager::getSingleton().getByName(name, RESOURCEGROUP_NAME);
+    CV_Assert(tex);
+    _createTexture(name, image.getMat());
 }
 }
 }
